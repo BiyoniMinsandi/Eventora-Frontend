@@ -3,6 +3,9 @@
 /**
  * Route: /customer/disputes
  * Purpose: Create disputes and track their status.
+ * Disputes can only be raised against Accepted or Completed bookings.
+ * Each booking can have at most one active (Open / In-Review) dispute at a time.
+ * The message thread lets customers follow admin communications during mediation.
  */
 
 import { Suspense, useEffect, useState } from 'react'
@@ -17,8 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/components/auth-provider'
 import { useToast } from '@/hooks/use-toast'
-import { getUserDisputes, createDispute, getUserBookings, getBookingById, type Dispute, type Booking, canCreateDispute } from '@/lib/data'
-import { AlertTriangle, Plus, ArrowLeft, Clock, CheckCircle2, X } from 'lucide-react'
+import { getUserDisputes, createDispute, getUserBookings, getBookingById, getDisputeMessages, sendDisputeMessage, type Dispute, type Booking, type DisputeMessage, canCreateDispute } from '@/lib/data'
+import { AlertTriangle, Plus, ArrowLeft, Clock, CheckCircle2, X, MessageSquare, Send } from 'lucide-react'
 
 interface DisputeFormData {
   bookingId: string
@@ -39,6 +42,10 @@ function CustomerDisputesContent() {
   const [showDialog, setShowDialog] = useState(false)
   const [selectedTab, setSelectedTab] = useState('all')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null)
+  const [messages, setMessages] = useState<DisputeMessage[]>([])
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
   
   const [formData, setFormData] = useState<DisputeFormData>({
     bookingId: searchParams.get('bookingId') || '',
@@ -191,6 +198,26 @@ function CustomerDisputesContent() {
   const filterDisputes = (status: string) => {
     if (status === 'all') return disputes
     return disputes.filter(d => d.status === status)
+  }
+
+  const openMessages = async (dispute: Dispute) => {
+    setSelectedDispute(dispute)
+    const msgs = await getDisputeMessages(dispute.id)
+    setMessages(msgs)
+  }
+
+  const handleSendMessage = async () => {
+    if (!selectedDispute || !newMessage.trim()) return
+    setSendingMessage(true)
+    try {
+      const msg = await sendDisputeMessage(selectedDispute.id, newMessage.trim())
+      setMessages((prev) => [...prev, msg])
+      setNewMessage('')
+    } catch {
+      toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' })
+    } finally {
+      setSendingMessage(false)
+    }
   }
 
   const getAvailableBookings = () => {
@@ -394,6 +421,18 @@ function CustomerDisputesContent() {
                             <p className="text-sm text-muted-foreground">{dispute.resolution}</p>
                           </div>
                         )}
+
+                        <div className="mt-4 flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 bg-transparent"
+                            onClick={() => openMessages(dispute)}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Messages
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   ))
@@ -415,6 +454,54 @@ function CustomerDisputesContent() {
           </Tabs>
         </div>
       </main>
+
+      {/* Dispute message thread panel */}
+      {selectedDispute && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-lg flex flex-col h-[80vh]">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <p className="font-semibold">{selectedDispute.title}</p>
+                <p className="text-xs text-muted-foreground">Dispute messages with admin</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedDispute(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-8">No messages yet. Start the conversation with the admin.</p>
+              ) : (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col gap-1 ${msg.senderId === user?.id ? 'items-end' : 'items-start'}`}
+                  >
+                    <p className="text-xs text-muted-foreground">{msg.senderName} ({msg.senderRole})</p>
+                    <div className={`rounded-lg px-3 py-2 max-w-[80%] text-sm ${msg.senderId === user?.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                      {msg.content}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{new Date(msg.timestamp).toLocaleString()}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            {selectedDispute.status !== 'resolved' && selectedDispute.status !== 'closed' && (
+              <div className="p-4 border-t flex gap-2">
+                <Input
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() } }}
+                />
+                <Button size="icon" onClick={handleSendMessage} disabled={sendingMessage || !newMessage.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,10 +1,16 @@
 using System.Security.Claims;
 using Eventora.Application.Abstractions.Persistence;
 using Eventora.Application.Contracts.Messaging;
+using Eventora.Domain.Bookings;
 using Eventora.Domain.Notifications;
 
 namespace Eventora.Api.Endpoints;
 
+/// <summary>
+/// Structured booking message endpoints (SRS §4.5).
+/// Conversations are always linked to a specific booking; messaging is blocked
+/// unless the booking is Accepted or Completed.
+/// </summary>
 internal static class MessagingEndpoints
 {
     public static void MapMessagingEndpoints(this WebApplication app)
@@ -38,7 +44,8 @@ internal static class MessagingEndpoints
                     conv.VendorName,
                     conv.LastMessage,
                     conv.LastMessageTime.ToString("O"),
-                    unread));
+                    unread,
+                    conv.BookingId));
             }
 
             return Results.Ok(dtos);
@@ -48,6 +55,7 @@ internal static class MessagingEndpoints
             GetOrCreateConversationRequest req,
             ClaimsPrincipal principal,
             IUserRepository users,
+            IBookingRepository bookings,
             IConversationRepository conversations,
             CancellationToken ct) =>
         {
@@ -60,10 +68,25 @@ internal static class MessagingEndpoints
                 return Results.Forbid();
             }
 
-            var existing = await conversations.GetByParticipantsAsync(req.CustomerId, req.VendorId, ct);
-            if (existing is not null)
+            // Enforce: messaging is only allowed within an active (accepted) booking context.
+            if (!string.IsNullOrWhiteSpace(req.BookingId))
             {
-                return Results.Ok(new { id = existing.Id });
+                var booking = await bookings.GetByIdAsync(req.BookingId, ct);
+                if (booking is null) return Results.NotFound(new { message = "Booking not found" });
+                if (booking.Status != BookingStatus.Accepted && booking.Status != BookingStatus.Completed)
+                    return Results.BadRequest(new { message = "Messaging is only allowed for accepted or completed bookings" });
+
+                // Reuse existing booking-linked conversation if one exists.
+                var byBooking = await conversations.GetByBookingIdAsync(req.BookingId, ct);
+                if (byBooking is not null)
+                    return Results.Ok(new { id = byBooking.Id, bookingId = byBooking.BookingId });
+            }
+            else
+            {
+                // Fallback: look up by participants (for legacy / admin views).
+                var existing = await conversations.GetByParticipantsAsync(req.CustomerId, req.VendorId, ct);
+                if (existing is not null)
+                    return Results.Ok(new { id = existing.Id, bookingId = existing.BookingId });
             }
 
             var customer = await users.GetByIdAsync(req.CustomerId, ct);
@@ -79,12 +102,13 @@ internal static class MessagingEndpoints
                 CustomerName = string.IsNullOrWhiteSpace(req.CustomerName) ? customer.FullName : req.CustomerName.Trim(),
                 VendorId = req.VendorId,
                 VendorName = string.IsNullOrWhiteSpace(req.VendorName) ? (vendor.BusinessName ?? vendor.FullName) : req.VendorName.Trim(),
+                BookingId = string.IsNullOrWhiteSpace(req.BookingId) ? null : req.BookingId.Trim(),
                 LastMessage = "No messages yet",
                 LastMessageTime = DateTimeOffset.UtcNow,
             };
 
             await conversations.CreateAsync(conv, ct);
-            return Results.Ok(new { id = conv.Id });
+            return Results.Ok(new { id = conv.Id, bookingId = conv.BookingId });
         });
 
         group.MapGet("/{id}/messages", async (
@@ -121,6 +145,7 @@ internal static class MessagingEndpoints
             ClaimsPrincipal principal,
             IConversationRepository conversations,
             IMessageRepository messages,
+            IBookingRepository bookings,
             INotificationRepository notifications,
             IUserRepository users,
             CancellationToken ct) =>
@@ -136,6 +161,15 @@ internal static class MessagingEndpoints
 
             var isParticipant = conv.CustomerId == userId || conv.VendorId == userId;
             if (!isParticipant && !principal.IsInRole("admin")) return Results.Forbid();
+
+            // SRS §4.5 & §5.5: communication must stay within an active booking context.
+            // We still allow messaging on Completed bookings so parties can follow up after the event.
+            if (!string.IsNullOrWhiteSpace(conv.BookingId))
+            {
+                var booking = await bookings.GetByIdAsync(conv.BookingId, ct);
+                if (booking is null || (booking.Status != BookingStatus.Accepted && booking.Status != BookingStatus.Completed))
+                    return Results.BadRequest(new { message = "Messaging is only allowed for accepted or completed bookings" });
+            }
 
             // Ensure receiver is the other participant.
             var allowedReceivers = new HashSet<string>(StringComparer.Ordinal) { conv.CustomerId, conv.VendorId };

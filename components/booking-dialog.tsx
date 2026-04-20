@@ -30,6 +30,7 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigge
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
     service: '',
@@ -49,11 +50,12 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigge
     }
 
     if (user.role !== 'customer') {
-      alert('Only customers can make bookings')
+      setError('Only customers can make bookings.')
       return
     }
 
     setLoading(true)
+    setError(null)
     try {
       await createBooking({
         customerId: user.id,
@@ -73,7 +75,7 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigge
       // Notifications are created by the server as the source of truth.
       setSuccess(true)
     } catch (e: any) {
-      alert(e?.message || 'Failed to create booking')
+      setError(e?.message || 'Failed to create booking. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -132,6 +134,9 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigge
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
+            )}
             <div className="space-y-2">
               <label htmlFor="service" className="text-sm font-medium">
                 Service Required *

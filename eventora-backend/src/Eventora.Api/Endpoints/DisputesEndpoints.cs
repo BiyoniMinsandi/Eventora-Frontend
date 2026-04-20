@@ -4,9 +4,16 @@ using Eventora.Application.Contracts.Disputes;
 using Eventora.Domain.Bookings;
 using Eventora.Domain.Disputes;
 using Eventora.Domain.Notifications;
+using Eventora.Domain.Users;
 
 namespace Eventora.Api.Endpoints;
 
+/// <summary>
+/// Admin-mediated dispute management endpoints (SRS §4.7).
+/// Only customers can raise disputes. Admins update status and resolution.
+/// Both parties and the admin can exchange messages within the dispute thread.
+/// Messages are blocked once the dispute is Resolved or Closed.
+/// </summary>
 internal static class DisputesEndpoints
 {
     public static void MapDisputesEndpoints(this WebApplication app)
@@ -113,6 +120,90 @@ internal static class DisputesEndpoints
 
             return Results.Ok(DisputeDtoMapping.ToDto(dispute));
         }).RequireAuthorization("CustomerOnly");
+
+        // Dispute messages — accessible by participants and admin
+        group.MapGet("/{id}/messages", async (
+            string id,
+            ClaimsPrincipal principal,
+            IDisputeRepository disputes,
+            IDisputeMessageRepository disputeMessages,
+            CancellationToken ct) =>
+        {
+            var userId = CurrentUser.TryGetUserId(principal);
+            if (string.IsNullOrWhiteSpace(userId)) return Results.Unauthorized();
+
+            var dispute = await disputes.GetByIdAsync(id, ct);
+            if (dispute is null) return Results.NotFound(new { message = "Dispute not found" });
+
+            var isParticipant = dispute.CustomerId == userId || dispute.VendorId == userId;
+            if (!isParticipant && !principal.IsInRole("admin")) return Results.Forbid();
+
+            var messages = await disputeMessages.GetForDisputeAsync(id, ct);
+            return Results.Ok(messages.Select(DisputeMessageDtoMapping.ToDto));
+        });
+
+        group.MapPost("/{id}/messages", async (
+            string id,
+            SendDisputeMessageRequest req,
+            ClaimsPrincipal principal,
+            IUserRepository users,
+            IDisputeRepository disputes,
+            IDisputeMessageRepository disputeMessages,
+            INotificationRepository notifications,
+            CancellationToken ct) =>
+        {
+            var userId = CurrentUser.TryGetUserId(principal);
+            if (string.IsNullOrWhiteSpace(userId)) return Results.Unauthorized();
+
+            var sender = await users.GetByIdAsync(userId, ct);
+            if (sender is null) return Results.Unauthorized();
+
+            var dispute = await disputes.GetByIdAsync(id, ct);
+            if (dispute is null) return Results.NotFound(new { message = "Dispute not found" });
+
+            var isParticipant = dispute.CustomerId == userId || dispute.VendorId == userId;
+            if (!isParticipant && !principal.IsInRole("admin")) return Results.Forbid();
+
+            if (dispute.Status == DisputeStatus.Resolved || dispute.Status == DisputeStatus.Closed)
+                return Results.BadRequest(new { message = "Cannot send messages on a resolved or closed dispute" });
+
+            var senderRole = sender.Role switch
+            {
+                UserRole.Admin => "admin",
+                UserRole.Vendor => "vendor",
+                _ => "customer",
+            };
+
+            var message = new DisputeMessage
+            {
+                DisputeId = id,
+                SenderId = sender.Id,
+                SenderName = sender.FullName,
+                SenderRole = senderRole,
+                Content = req.Content.Trim(),
+            };
+
+            await disputeMessages.CreateAsync(message, ct);
+
+            // Notify the other participant(s)
+            if (sender.Id != dispute.CustomerId)
+            {
+                await NotificationHelpers.CreateAsync(notifications, dispute.CustomerId,
+                    NotificationType.DisputeUpdate, "New message on your dispute",
+                    $"{sender.FullName} sent a message on dispute: {dispute.Title}",
+                    relatedBookingId: dispute.BookingId, relatedDisputeId: dispute.Id, ct);
+            }
+
+            if (sender.Id != dispute.VendorId)
+            {
+                await NotificationHelpers.CreateAsync(notifications, dispute.VendorId,
+                    NotificationType.DisputeUpdate, "New message on dispute",
+                    $"{sender.FullName} sent a message on dispute: {dispute.Title}",
+                    relatedBookingId: dispute.BookingId, relatedDisputeId: dispute.Id, ct);
+            }
+
+            return Results.Ok(DisputeMessageDtoMapping.ToDto(message));
+        });
 
         // Admin updates
         var admin = app.MapGroup("/api/admin/disputes").WithTags("Admin").RequireAuthorization("AdminOnly");

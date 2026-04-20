@@ -132,6 +132,11 @@ const getNavItems = (role: 'customer' | 'vendor' | 'admin') => {
       icon: FileCheck,
     },
     {
+      label: 'Bookings',
+      href: '/admin/bookings',
+      icon: ShoppingCart,
+    },
+    {
       label: 'Disputes',
       href: '/admin/disputes',
       icon: AlertTriangle,

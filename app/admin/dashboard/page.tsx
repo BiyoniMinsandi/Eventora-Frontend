@@ -192,6 +192,12 @@ export default function AdminDashboard() {
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="w-full bg-transparent">
+                    <Link href="/admin/bookings">
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Monitor Bookings
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full bg-transparent">
                     <Link href="/admin/disputes">
                       <AlertTriangle className="w-4 h-4 mr-2" />
                       Handle Disputes

@@ -2,8 +2,11 @@
 
 /**
  * Route: /vendors
- * Purpose: Browse approved vendors with basic client-side filtering.
- * Note: Wrapped in Suspense because Next requires it for useSearchParams() in App Router.
+ * Purpose: Browse approved vendors.
+ * Category and price range are filtered by the backend; text search is applied
+ * client-side on the returned set for instant feedback while typing.
+ * Suspense is required because useSearchParams() must be inside a Suspense boundary
+ * in Next.js App Router.
  */
 
 import { useState, useEffect } from 'react'
@@ -30,21 +33,31 @@ export default function VendorBrowsePage() {
   const [vendors, setVendors] = useState<User[]>([])
   const [reviewSummary, setReviewSummary] = useState<Record<string, { avg: number; count: number }>>({})
 
-  // Initialize filters from URL parameters and load approved vendors.
+  const PRICE_BOUNDS: Record<string, { min?: number; max?: number }> = {
+    all: {},
+    budget: { max: 25000 },
+    mid: { min: 25000, max: 100000 },
+    premium: { min: 100000 },
+  }
+
+  // Re-fetch from the API when category or price range changes.
+  // Text search is handled client-side for instant feedback.
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     const searchParam = searchParams.get('search')
-    
-    if (categoryParam) {
-      setSelectedCategory(categoryParam)
-    }
-    if (searchParam) {
-      setSearchQuery(searchParam)
-    }
 
+    if (categoryParam) setSelectedCategory(categoryParam)
+    if (searchParam) setSearchQuery(searchParam)
+
+    const bounds = PRICE_BOUNDS[priceRange] ?? {}
     let cancelled = false
+
     ;(async () => {
-      const approvedVendors = await getVendors()
+      const approvedVendors = await getVendors({
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        minPrice: bounds.min,
+        maxPrice: bounds.max,
+      })
       if (cancelled) return
       setVendors(approvedVendors)
     })()
@@ -52,7 +65,9 @@ export default function VendorBrowsePage() {
     return () => {
       cancelled = true
     }
-  }, [searchParams])
+    // PRICE_BOUNDS is a constant defined in the same render; safe to omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, priceRange, selectedCategory])
 
   useEffect(() => {
     if (vendors.length === 0) {
@@ -89,18 +104,15 @@ export default function VendorBrowsePage() {
     { value: 'music', label: 'Music & Entertainment' },
   ]
 
-  // Client-side filtering keeps this page static-friendly (no API required).
+  // Vendors are already filtered by the backend; keep a local search pass for instant UI response.
   const filteredVendors = vendors.filter((vendor) => {
-    const matchesSearch = 
-      vendor.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesCategory = 
-      selectedCategory === 'all' || 
-      vendor.category?.toLowerCase() === selectedCategory
-
-    return matchesSearch && matchesCategory
+    if (!searchQuery) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      vendor.businessName?.toLowerCase().includes(q) ||
+      vendor.fullName.toLowerCase().includes(q) ||
+      vendor.description?.toLowerCase().includes(q)
+    )
   })
 
   return (

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Eventora.Domain.Disputes;
 
 namespace Eventora.Application.Contracts.Disputes;
 
@@ -13,6 +14,24 @@ public sealed record UpdateDisputeRequest(
     string? Status,
     string? Priority,
     string? Resolution);
+
+public sealed record SendDisputeMessageRequest(
+    [property: Required, MinLength(1)] string Content);
+
+public sealed record DisputeMessageDto(
+    string Id,
+    string DisputeId,
+    string SenderId,
+    string SenderName,
+    string SenderRole,
+    string Content,
+    string Timestamp);
+
+public static class DisputeMessageDtoMapping
+{
+    public static DisputeMessageDto ToDto(DisputeMessage m) =>
+        new(m.Id, m.DisputeId, m.SenderId, m.SenderName, m.SenderRole, m.Content, m.Timestamp.ToString("O"));
+}
 
 public sealed record DisputeDto(
     string Id,

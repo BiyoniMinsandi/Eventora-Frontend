@@ -1,4 +1,8 @@
-// Data management for bookings, messages, reviews, disputes, and notifications via backend API.
+/**
+ * All data access functions for the Eventora frontend.
+ * Every function calls the .NET backend via apiFetch (which attaches the Bearer token).
+ * Admin-only functions (getAdminUsers, getReviews, etc.) will 403 if called by a non-admin.
+ */
 
 import { apiFetch } from '@/lib/api'
 import { getCurrentUser, type User } from '@/lib/auth'
@@ -54,6 +58,7 @@ export interface Conversation {
   lastMessage: string
   lastMessageTime: string
   unreadCount: number
+  bookingId?: string
 }
 
 export interface Review {
@@ -85,12 +90,27 @@ export interface Dispute {
   resolution?: string
 }
 
-// Vendors (public)
-export async function getVendors(params?: { search?: string; category?: string; location?: string }): Promise<User[]> {
+export interface DisputeMessage {
+  id: string
+  disputeId: string
+  senderId: string
+  senderName: string
+  senderRole: 'customer' | 'vendor' | 'admin'
+  content: string
+  timestamp: string
+}
+
+// ── Vendors ──────────────────────────────────────────────────────────────────
+
+// Category and price range are filtered server-side. Text search is done
+// client-side on the returned list for instant feedback while typing.
+export async function getVendors(params?: { search?: string; category?: string; location?: string; minPrice?: number; maxPrice?: number }): Promise<User[]> {
   const qs = new URLSearchParams()
   if (params?.search) qs.set('search', params.search)
   if (params?.category) qs.set('category', params.category)
   if (params?.location) qs.set('location', params.location)
+  if (params?.minPrice != null) qs.set('minPrice', String(params.minPrice))
+  if (params?.maxPrice != null) qs.set('maxPrice', String(params.maxPrice))
 
   const suffix = qs.toString() ? `?${qs}` : ''
   return await apiFetch<User[]>(`/api/vendors${suffix}`, { auth: false })
@@ -125,7 +145,10 @@ export async function unsuspendUser(userId: string): Promise<User> {
   return await apiFetch<User>(`/api/admin/users/${userId}/unsuspend`, { method: 'POST', body: {} })
 }
 
-// Booking Management
+// ── Bookings ─────────────────────────────────────────────────────────────────
+
+// Admins call the dedicated /api/admin/bookings route which returns all bookings.
+// Customers and vendors get only their own via /api/bookings (enforced server-side).
 export async function getBookings(): Promise<Booking[]> {
   const user = getCurrentUser()
   if (user?.role === 'admin') {
@@ -189,21 +212,25 @@ export async function getBookingById(bookingId: string): Promise<Booking | undef
   }
 }
 
-// Messaging
+// ── Messaging ────────────────────────────────────────────────────────────────
+
 export async function getUserConversations(userId: string, role: 'customer' | 'vendor'): Promise<Conversation[]> {
   const list = await apiFetch<Conversation[]>(`/api/conversations`)
   return list.filter((c) => (role === 'customer' ? c.customerId === userId : c.vendorId === userId))
 }
 
+// Pass bookingId whenever possible so the server can enforce the active-booking
+// messaging rule and create a booking-scoped thread.
 export async function getOrCreateConversation(
   customerId: string,
   customerName: string,
   vendorId: string,
-  vendorName: string
+  vendorName: string,
+  bookingId?: string
 ): Promise<string> {
   const res = await apiFetch<{ id: string }>(`/api/conversations/get-or-create`, {
     method: 'POST',
-    body: { customerId, customerName, vendorId, vendorName },
+    body: { customerId, customerName, vendorId, vendorName, bookingId },
   })
   return res.id
 }
@@ -223,7 +250,9 @@ export async function markConversationAsRead(conversationId: string, _userId: st
   await apiFetch(`/api/conversations/${conversationId}/read`, { method: 'POST', body: {} })
 }
 
-// Reviews
+// ── Reviews ──────────────────────────────────────────────────────────────────
+
+// Reviews can only be submitted for Completed bookings (enforced server-side).
 export async function getVendorReviews(vendorId: string): Promise<Review[]> {
   return await apiFetch<Review[]>(`/api/reviews/vendor/${vendorId}`, { auth: false })
 }
@@ -278,7 +307,9 @@ export async function getBookingStats(userId: string, role: 'customer' | 'vendor
   }
 }
 
-// Disputes
+// ── Disputes ─────────────────────────────────────────────────────────────────
+
+// The server returns all disputes to admins, only own disputes to customers/vendors.
 export async function getDisputes(): Promise<Dispute[]> {
   return await apiFetch<Dispute[]>(`/api/disputes`)
 }
@@ -454,4 +485,26 @@ export async function getAdminFaqs(): Promise<AdminFaq[]> {
 
 export async function getAdminCategories(): Promise<AdminCategory[]> {
   return await apiFetch<AdminCategory[]>(`/api/admin/content/categories`)
+}
+
+// ── Dispute messages ─────────────────────────────────────────────────────────
+
+export async function getDisputeMessages(disputeId: string): Promise<DisputeMessage[]> {
+  return await apiFetch<DisputeMessage[]>(`/api/disputes/${disputeId}/messages`)
+}
+
+export async function sendDisputeMessage(disputeId: string, content: string): Promise<DisputeMessage> {
+  return await apiFetch<DisputeMessage>(`/api/disputes/${disputeId}/messages`, {
+    method: 'POST',
+    body: { content },
+  })
+}
+
+// ── Account security ─────────────────────────────────────────────────────────
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  return await apiFetch<{ message: string }>(`/api/users/me/password`, {
+    method: 'POST',
+    body: { currentPassword, newPassword },
+  })
 }

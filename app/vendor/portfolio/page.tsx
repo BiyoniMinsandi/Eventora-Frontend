@@ -2,7 +2,9 @@
 
 /**
  * Route: /vendor/portfolio
- * Purpose: Manage portfolio images and showcase content.
+ * Purpose: Manage portfolio images and service listings.
+ * Services are stored as "Title:Description" strings and rendered as cards.
+ * Photos are stored as URL strings via PUT /api/users/me — no file upload server needed.
  */
 
 import { useState, useEffect } from 'react'
@@ -34,15 +36,19 @@ interface PortfolioItem {
   views: number
 }
 
+interface PhotoItem {
+  url: string
+}
+
 export default function VendorPortfolio() {
   const { user, logout, login } = useAuth()
   const router = useRouter()
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [showAddDialog, setShowAddDialog] = useState(false)
-  const [newItem, setNewItem] = useState({
-    title: '',
-    description: '',
-  })
+  const [newItem, setNewItem] = useState({ title: '', description: '' })
+  const [photos, setPhotos] = useState<string[]>([])
+  const [newPhotoUrl, setNewPhotoUrl] = useState('')
+  const [savingPhotos, setSavingPhotos] = useState(false)
 
   const handleLogout = () => {
     // Centralize logout behavior so Sidebar can just call one handler.
@@ -52,17 +58,43 @@ export default function VendorPortfolio() {
 
   useEffect(() => {
     if (user?.services) {
-      // Convert services to portfolio items for display
       const items: PortfolioItem[] = user.services.map((service, idx) => ({
         id: `service_${idx}`,
         title: service.split(':')[0] || service,
         description: service.split(':')[1] || 'Service description',
         featured: idx === 0,
-        views: Math.floor(Math.random() * 1000),
+        views: 0,
       }))
       setPortfolioItems(items)
     }
+    if (user?.photos) {
+      setPhotos(user.photos)
+    }
   }, [user])
+
+  const handleAddPhoto = async () => {
+    if (!newPhotoUrl.trim()) return
+    const updated = [...photos, newPhotoUrl.trim()]
+    setSavingPhotos(true)
+    const result = await updateMeApi({ photos: updated })
+    if (result.success) {
+      if (result.user) login(result.user)
+      setPhotos(updated)
+      setNewPhotoUrl('')
+    }
+    setSavingPhotos(false)
+  }
+
+  const handleRemovePhoto = async (idx: number) => {
+    const updated = photos.filter((_, i) => i !== idx)
+    setSavingPhotos(true)
+    const result = await updateMeApi({ photos: updated })
+    if (result.success) {
+      if (result.user) login(result.user)
+      setPhotos(updated)
+    }
+    setSavingPhotos(false)
+  }
 
   const handleAddItem = async () => {
     if (!newItem.title || !newItem.description) return
@@ -271,6 +303,55 @@ export default function VendorPortfolio() {
               </Card>
             </div>
           )}
+          {/* Photo Gallery Management */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold">Photo Gallery</h2>
+                <p className="text-sm text-muted-foreground">Add photo URLs to showcase on your vendor profile</p>
+              </div>
+            </div>
+
+            {/* Add photo URL */}
+            <div className="flex gap-2 mb-4">
+              <Input
+                placeholder="Paste a photo URL (e.g. https://...)"
+                value={newPhotoUrl}
+                onChange={(e) => setNewPhotoUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPhoto() } }}
+              />
+              <Button onClick={handleAddPhoto} disabled={savingPhotos || !newPhotoUrl.trim()} className="gap-1 shrink-0">
+                <Upload className="w-4 h-4" />
+                Add
+              </Button>
+            </div>
+
+            {photos.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No photos yet. Paste a URL above to add your first photo.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {photos.map((url, idx) => (
+                  <div key={idx} className="relative group rounded-lg overflow-hidden bg-muted aspect-square">
+                    <Image
+                      src={url}
+                      alt={`Photo ${idx + 1}`}
+                      fill
+                      className="object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.jpg' }}
+                    />
+                    <button
+                      onClick={() => handleRemovePhoto(idx)}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       </main>
     </div>

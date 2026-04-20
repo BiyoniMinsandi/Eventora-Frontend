@@ -3,7 +3,7 @@
  * Provides secure authentication, user management, and session handling
  */
 
-import { generateJWT, storeToken, getCurrentTokenPayload, clearTokens, AuthToken, verifyJWT } from './jwt'
+import { generateJWT, storeToken, getStoredToken, getCurrentTokenPayload, clearTokens, AuthToken, verifyJWT } from './jwt'
 import { apiFetch } from '@/lib/api'
 import { validateEmail, validatePassword } from './validation'
 import { AuthenticationError, ConflictError, NotFoundError, ErrorLogger } from './errors'
@@ -36,6 +36,8 @@ export interface User {
   photos?: string[] // Base64 or URLs
   services?: string[]
   pricing?: string
+  priceMin?: number
+  priceMax?: number
   experience?: string
   rejectionReason?: string
   rejectedAt?: string
@@ -102,28 +104,32 @@ export function saveUsers(users: User[]): void {
  * Uses JWT token validation for session security
  * @returns Current user or null if not authenticated
  */
+/**
+ * Returns the currently authenticated user from localStorage, validated against
+ * the stored JWT. Returns null if the token is missing or expired.
+ * The full user object (including vendor fields) lives in AUTH_STORAGE_KEY;
+ * the JWT only carries userId / email / role.
+ */
 export function getCurrentUser(): User | null {
   if (typeof window === 'undefined') return null
 
-  // Check if JWT token is valid
   const tokenPayload = getCurrentTokenPayload()
-  if (!tokenPayload) {
-    return null
-  }
+  if (!tokenPayload) return null
 
-  // Prefer stored auth state
   const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY)
   if (storedAuth) {
-    const authState = JSON.parse(storedAuth) as AuthState
-    if (authState?.user?.id === tokenPayload.userId) {
-      return authState.user
+    try {
+      const authState = JSON.parse(storedAuth) as AuthState
+      if (authState?.user?.id === tokenPayload.userId) {
+        return authState.user
+      }
+    } catch {
+      // corrupted storage — clear so the next login starts fresh
+      localStorage.removeItem(AUTH_STORAGE_KEY)
     }
   }
 
-  // Fallback to local users list
-  const users = getStoredUsers()
-  const user = users.find((u) => u.id === tokenPayload.userId)
-  return user || null
+  return null
 }
 
 /**
@@ -671,8 +677,11 @@ export async function updateMeApi(
       body: updates,
     })
 
-    // Keep local auth state in sync so refresh-less navigation works.
-    setAuthState(updated)
+    // Update the stored user object without touching the backend JWT.
+    // Calling setAuthState(updated) without a token would replace the real
+    // backend-signed JWT with a locally generated one, breaking subsequent requests.
+    const existingToken = getStoredToken()
+    setAuthState(updated, existingToken ?? undefined)
 
     return { success: true, message: 'Profile updated successfully', user: updated }
   } catch (error: any) {

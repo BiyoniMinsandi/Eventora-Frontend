@@ -23,6 +23,13 @@ internal sealed class MongoConversationRepository(MongoCollections collections) 
             .FirstOrDefaultAsync(ct);
     }
 
+    public async Task<Conversation?> GetByBookingIdAsync(string bookingId, CancellationToken ct)
+    {
+        return await _conversations
+            .Find(c => c.BookingId == bookingId)
+            .FirstOrDefaultAsync(ct);
+    }
+
     public async Task<IReadOnlyList<Conversation>> GetForUserAsync(string userId, string role, CancellationToken ct)
     {
         FilterDefinition<Conversation> filter = role.Trim().ToLowerInvariant() switch

@@ -13,5 +13,7 @@ public sealed record UpdateMeRequest(
     List<string>? Photos,
     List<string>? Services,
     string? Pricing,
+    int? PriceMin,
+    int? PriceMax,
     string? Experience,
     List<AvailabilitySlotDto>? Availability);

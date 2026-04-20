@@ -5,14 +5,19 @@ using Eventora.Domain.Users;
 
 namespace Eventora.Api.Endpoints;
 
+/// <summary>
+/// Vendor discovery and admin approval endpoints.
+/// The public listing (GET /api/vendors) requires no authentication so customers
+/// can browse before logging in.
+/// </summary>
 internal static class VendorsEndpoints
 {
     public static void MapVendorEndpoints(this WebApplication app)
     {
-        // Public vendor listing
+        // Public vendor listing — no auth required
         var vendors = app.MapGroup("/api/vendors").WithTags("Vendors");
 
-        vendors.MapGet("", async (string? search, string? category, string? location, IUserRepository users, CancellationToken ct) =>
+        vendors.MapGet("", async (string? search, string? category, string? location, int? minPrice, int? maxPrice, IUserRepository users, CancellationToken ct) =>
         {
             var all = await users.FindVendorsAsync(approvedOnly: true, ct);
 
@@ -37,6 +42,14 @@ internal static class VendorsEndpoints
                 var l = location.Trim().ToLowerInvariant();
                 query = query.Where(v => (v.Location ?? "").Trim().ToLowerInvariant().Contains(l));
             }
+
+            // Price range: include vendors whose range overlaps the requested window.
+            // A vendor without numeric prices (PriceMin/PriceMax null) is always included.
+            if (minPrice.HasValue)
+                query = query.Where(v => v.PriceMax == null || v.PriceMax >= minPrice.Value);
+
+            if (maxPrice.HasValue)
+                query = query.Where(v => v.PriceMin == null || v.PriceMin <= maxPrice.Value);
 
             return Results.Ok(query.Select(UserDtoMapping.ToDto));
         });

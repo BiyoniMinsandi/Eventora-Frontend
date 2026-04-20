@@ -13,12 +13,15 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddEventoraInfrastructure(
+    /// <summary>
+/// Registers all infrastructure services: MongoDB, repositories, and the password hasher.
+/// </summary>
+public static IServiceCollection AddEventoraInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Ensure Domain entities remain persistence-agnostic while MongoDB still understands how to map Id.
-        // This maps a property named "Id" to Mongo's "_id" field for all Eventora.Domain types.
+        // Map the domain "Id" property to MongoDB's "_id" field without coupling
+        // the domain layer to any MongoDB attributes.
         try
         {
             var pack = new ConventionPack
@@ -65,6 +68,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMessageRepository, MongoMessageRepository>();
         services.AddSingleton<IReviewRepository, MongoReviewRepository>();
         services.AddSingleton<IDisputeRepository, MongoDisputeRepository>();
+        services.AddSingleton<IDisputeMessageRepository, MongoDisputeMessageRepository>();
         services.AddSingleton<INotificationRepository, MongoNotificationRepository>();
 
         return services;

@@ -32,6 +32,14 @@ internal sealed class MongoBookingRepository(MongoCollections collections) : IBo
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Booking>> GetAllAsync(CancellationToken ct)
+    {
+        return await _bookings
+            .Find(_ => true)
+            .SortByDescending(b => b.CreatedAt)
+            .ToListAsync(ct);
+    }
+
     public async Task CreateAsync(Booking booking, CancellationToken ct)
     {
         MongoId.EnsureId(booking, b => b.Id, (b, v) => b.Id = v);

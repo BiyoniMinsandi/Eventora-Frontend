@@ -184,11 +184,8 @@ export default function VendorDashboard() {
                           </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <Button size="sm" variant="default">
-                            Accept
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            Decline
+                          <Button size="sm" variant="default" asChild>
+                            <Link href="/vendor/requests">Review</Link>
                           </Button>
                         </div>
                       </div>

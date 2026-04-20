@@ -7,6 +7,11 @@ using Eventora.Domain.Users;
 
 namespace Eventora.Api.Endpoints;
 
+/// <summary>
+/// Booking lifecycle endpoints.
+/// State machine: Pending → Accepted | Rejected, Accepted → Completed | Cancelled, Pending → Cancelled.
+/// Each transition fires a notification to the other party.
+/// </summary>
 internal static class BookingsEndpoints
 {
     public static void MapBookingEndpoints(this WebApplication app)
@@ -29,6 +34,7 @@ internal static class BookingsEndpoints
             {
                 UserRole.Customer => await bookings.GetForCustomerAsync(userId, ct),
                 UserRole.Vendor => await bookings.GetForVendorAsync(userId, ct),
+                UserRole.Admin => await bookings.GetAllAsync(ct),
                 _ => await bookings.GetForCustomerAsync(userId, ct)
             };
 
@@ -129,8 +135,10 @@ internal static class BookingsEndpoints
             booking.VendorResponseNote = string.IsNullOrWhiteSpace(req.VendorResponseNote) ? null : req.VendorResponseNote.Trim();
             await bookings.UpdateAsync(booking, ct);
 
-            // Create a conversation on acceptance (frontend behavior)
-            var existing = await conversations.GetByParticipantsAsync(booking.CustomerId, booking.VendorId, ct);
+            // Create a booking-linked conversation so the customer and vendor can message each other.
+            // We key by BookingId, not by participant pair, so two bookings between the same people
+            // get separate threads.
+            var existing = await conversations.GetByBookingIdAsync(booking.Id, ct);
             if (existing is null)
             {
                 var conversation = new Eventora.Domain.Messaging.Conversation
@@ -139,6 +147,7 @@ internal static class BookingsEndpoints
                     CustomerName = booking.CustomerName,
                     VendorId = booking.VendorId,
                     VendorName = booking.VendorBusinessName,
+                    BookingId = booking.Id,
                     LastMessage = "Booking accepted. You can start chatting.",
                     LastMessageTime = DateTimeOffset.UtcNow,
                 };
@@ -176,8 +185,12 @@ internal static class BookingsEndpoints
             if (booking.VendorId != userId) return Results.Forbid();
             if (booking.Status != BookingStatus.Pending) return Results.BadRequest(new { message = "Booking is not pending" });
 
+            // SRS §5.5: vendors must provide a response note when rejecting.
+            if (string.IsNullOrWhiteSpace(req.VendorResponseNote))
+                return Results.BadRequest(new { message = "A response note is required when rejecting a booking" });
+
             booking.Status = BookingStatus.Rejected;
-            booking.VendorResponseNote = string.IsNullOrWhiteSpace(req.VendorResponseNote) ? null : req.VendorResponseNote.Trim();
+            booking.VendorResponseNote = req.VendorResponseNote.Trim();
             await bookings.UpdateAsync(booking, ct);
 
             await NotificationHelpers.CreateAsync(
@@ -266,5 +279,14 @@ internal static class BookingsEndpoints
 
             return Results.Ok(BookingDtoMapping.ToDto(booking));
         }).RequireAuthorization("VendorOnly");
+
+        // Admin booking monitoring
+        var admin = app.MapGroup("/api/admin/bookings").WithTags("Admin").RequireAuthorization("AdminOnly");
+
+        admin.MapGet("", async (IBookingRepository bookings, CancellationToken ct) =>
+        {
+            var all = await bookings.GetAllAsync(ct);
+            return Results.Ok(all.Select(BookingDtoMapping.ToDto));
+        });
     }
 }

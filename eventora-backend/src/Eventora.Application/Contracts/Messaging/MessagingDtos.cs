@@ -10,7 +10,8 @@ public sealed record ConversationDto(
     string VendorName,
     string LastMessage,
     string LastMessageTime,
-    int UnreadCount);
+    int UnreadCount,
+    string? BookingId);
 
 public sealed record MessageDto(
     string Id,
@@ -26,7 +27,8 @@ public sealed record GetOrCreateConversationRequest(
     [property: Required] string CustomerId,
     [property: Required] string CustomerName,
     [property: Required] string VendorId,
-    [property: Required] string VendorName);
+    [property: Required] string VendorName,
+    string? BookingId);
 
 public sealed record SendMessageRequest(
     [property: Required] string ReceiverId,

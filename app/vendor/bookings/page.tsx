@@ -79,7 +79,8 @@ export default function VendorBookingsPage() {
       booking.customerId,
       booking.customerName || 'Customer',
       user.id,
-      user.businessName || user.fullName
+      user.businessName || user.fullName,
+      booking.id
     )
     router.push(`/vendor/messages?conversationId=${conversationId}`)
   }

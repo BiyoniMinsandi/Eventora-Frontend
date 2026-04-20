@@ -22,11 +22,38 @@ import {
   Save,
   ArrowLeft,
 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { changePassword } from '@/lib/data'
 
 export default function CustomerSettings() {
   const router = useRouter()
+  const { toast } = useToast()
   const [showPassword, setShowPassword] = useState(false)
   const [activeTab, setActiveTab] = useState('preferences')
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+  const [pwLoading, setPwLoading] = useState(false)
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pwForm.next !== pwForm.confirm) {
+      toast({ title: 'Error', description: 'New passwords do not match', variant: 'destructive' })
+      return
+    }
+    if (pwForm.next.length < 6) {
+      toast({ title: 'Error', description: 'Password must be at least 6 characters', variant: 'destructive' })
+      return
+    }
+    setPwLoading(true)
+    try {
+      const res = await changePassword(pwForm.current, pwForm.next)
+      toast({ title: 'Success', description: res.message })
+      setPwForm({ current: '', next: '', confirm: '' })
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message || 'Failed to update password', variant: 'destructive' })
+    } finally {
+      setPwLoading(false)
+    }
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -117,7 +144,7 @@ export default function CustomerSettings() {
             <TabsContent value="security" className="space-y-6">
               <Card className="p-8">
                 <h2 className="text-xl font-bold text-foreground mb-6">Change Password</h2>
-                <div className="space-y-4 max-w-md">
+                <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Current Password
@@ -126,6 +153,9 @@ export default function CustomerSettings() {
                       type="password"
                       placeholder="••••••••"
                       className="bg-muted border-border"
+                      value={pwForm.current}
+                      onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
+                      required
                     />
                   </div>
 
@@ -138,17 +168,16 @@ export default function CustomerSettings() {
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
                         className="bg-muted border-border"
+                        value={pwForm.next}
+                        onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
+                        required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-3 text-muted-foreground"
                       >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -161,14 +190,17 @@ export default function CustomerSettings() {
                       type="password"
                       placeholder="••••••••"
                       className="bg-muted border-border"
+                      value={pwForm.confirm}
+                      onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                      required
                     />
                   </div>
 
-                  <Button className="gap-2">
+                  <Button type="submit" className="gap-2" disabled={pwLoading}>
                     <Lock className="w-4 h-4" />
-                    Update Password
+                    {pwLoading ? 'Updating...' : 'Update Password'}
                   </Button>
-                </div>
+                </form>
               </Card>
 
               <Card className="p-8 bg-primary/5 border-primary/20">

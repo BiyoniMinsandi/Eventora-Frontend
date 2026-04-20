@@ -56,9 +56,9 @@ internal static class ReviewsEndpoints
             await NotificationHelpers.CreateAsync(
                 notifications,
                 booking.VendorId,
-                Eventora.Domain.Notifications.NotificationType.Message,
-                "New review",
-                $"{customer.FullName} left a review.",
+                Eventora.Domain.Notifications.NotificationType.ReviewPrompt,
+                "New review received",
+                $"{customer.FullName} left you a review.",
                 relatedBookingId: booking.Id,
                 relatedDisputeId: null,
                 ct);

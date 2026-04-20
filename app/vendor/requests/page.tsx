@@ -2,7 +2,9 @@
 
 /**
  * Route: /vendor/requests
- * Purpose: Incoming booking requests (accept/reject + message).
+ * Purpose: Incoming pending booking requests (accept/reject + response note).
+ * SRS §4.4: a response note is required for rejection and optional for acceptance.
+ * Accepting a booking auto-creates the booking-linked conversation thread.
  */
 
 import Link from 'next/link'
@@ -97,7 +99,8 @@ export default function VendorRequestsPage() {
         selectedRequest.customerId,
         selectedRequest.customerName || 'Customer',
         user!.id,
-        user!.businessName || user!.fullName
+        user!.businessName || user!.fullName,
+        selectedRequest.id
       )
     }
 
