@@ -1,27 +1,24 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ── Frontend (eventora-frontend/) ────────────────────────────────────────────
+eventora-frontend/node_modules
+eventora-frontend/.next/
+eventora-frontend/out/
+eventora-frontend/build
+eventora-frontend/.env*
+eventora-frontend/.vercel
+eventora-frontend/*.tsbuildinfo
+eventora-frontend/next-env.d.ts
 
-# dependencies
-/node_modules
+# ── Backend (eventora-backend/) ──────────────────────────────────────────────
+eventora-backend/**/bin/
+eventora-backend/**/obj/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# debug
+# ── Debug logs ───────────────────────────────────────────────────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# ── Misc (env files, OS artifacts) ───────────────────────────────────────────
 .env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+.DS_Store
+Thumbs.db
