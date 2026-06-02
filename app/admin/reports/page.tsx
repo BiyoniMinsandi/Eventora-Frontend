@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /admin/reports
+ * Purpose: Create/export admin reports.
+ */
+
 import { Sidebar } from '@/components/layout/sidebar'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

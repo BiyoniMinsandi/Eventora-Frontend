@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/availability
+ * Purpose: Set availability so customers know open time slots.
+ */
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'

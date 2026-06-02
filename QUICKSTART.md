@@ -78,21 +78,21 @@ http://localhost:3000
 
 ## Testing Security Features
 
-### Test Accounts (All passwords: `demo123`)
+### Test Accounts (All passwords: `Demo123`)
 
 #### Customer Account
 - **Email**: `customer@example.com`
-- **Password**: `demo123`
+- **Password**: `Demo123`
 - **Access**: Customer dashboard, bookings, reviews, disputes
 
 #### Vendor Account
 - **Email**: `vendor@example.com`
-- **Password**: `demo123`
+- **Password**: `Demo123`
 - **Access**: Vendor dashboard, bookings, availability, analytics
 
 #### Admin Account
 - **Email**: `admin@example.com`
-- **Password**: `demo123`
+- **Password**: `Demo123`
 - **Access**: Admin dashboard, user management, approvals, disputes
 
 ### JWT Token Testing
@@ -253,7 +253,7 @@ import {
 } from '@/lib/auth'
 
 // Login
-const result = loginUser('customer@example.com', 'demo123')
+const result = loginUser('customer@example.com', 'Demo123')
 if (result.success) {
   console.log('User:', result.user)
   console.log('Token:', result.token)

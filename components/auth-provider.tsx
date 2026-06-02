@@ -34,6 +34,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasValidToken, setHasValidToken] = useState(false)
 
+  const refreshToken = React.useCallback(() => {
+    try {
+      const refreshToken = getStoredRefreshToken()
+      if (!refreshToken) {
+        logout()
+        return
+      }
+
+      const newToken = verifyRefreshToken(refreshToken)
+      if (newToken) {
+        storeToken(newToken)
+        setHasValidToken(true)
+      } else {
+        logout()
+      }
+    } catch (error) {
+      ErrorLogger.log(error instanceof Error ? error : new Error(String(error)), {
+        action: 'Token refresh failed',
+      })
+      logout()
+    }
+  }, [])
+
   /**
    * Initialize authentication on component mount
    */
@@ -65,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [refreshToken])
 
   /**
    * Login user with authentication
@@ -95,32 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ErrorLogger.log(error instanceof Error ? error : new Error(String(error)), {
         action: 'AuthProvider logout',
       })
-    }
-  }
-
-  /**
-   * Refresh JWT token using refresh token
-   */
-  const refreshToken = () => {
-    try {
-      const refreshToken = getStoredRefreshToken()
-      if (!refreshToken) {
-        logout()
-        return
-      }
-
-      const newToken = verifyRefreshToken(refreshToken)
-      if (newToken) {
-        storeToken(newToken)
-        setHasValidToken(true)
-      } else {
-        logout()
-      }
-    } catch (error) {
-      ErrorLogger.log(error instanceof Error ? error : new Error(String(error)), {
-        action: 'Token refresh failed',
-      })
-      logout()
     }
   }
 

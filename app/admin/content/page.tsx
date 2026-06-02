@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /admin/content
+ * Purpose: Admin content management screen (stored locally for demo mode).
+ */
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'

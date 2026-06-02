@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /admin/dashboard
+ * Purpose: Admin overview (user/vendor counts + navigation to admin tasks).
+ */
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -26,6 +31,7 @@ export default function AdminDashboard() {
   const { user } = useAuth()
   const router = useRouter()
 
+  // Clears auth and returns to login.
   const handleLogout = () => {
     logoutUser()
     router.push('/login')
@@ -34,6 +40,7 @@ export default function AdminDashboard() {
   const [allUsers, setAllUsers] = useState({ customers: 0, vendors: 0, admins: 0 })
 
   useEffect(() => {
+    // Vendor approval counts come from local storage.
     const vendorData = getVendorsForApproval()
     setVendorStats({
       pending: vendorData.pending.length,
@@ -41,6 +48,7 @@ export default function AdminDashboard() {
       rejected: vendorData.rejected.length,
     })
 
+    // User counts are derived from stored users.
     const users = getStoredUsers()
     setAllUsers({
       customers: users.filter(u => u.role === 'customer').length,

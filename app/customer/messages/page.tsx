@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * Route: /customer/messages
+ * Purpose: Customer inbox + conversation view.
+ * Note: Uses Suspense because it reads URL params with useSearchParams().
+ */
+
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,8 +13,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { MessageCircle, Send, ArrowLeft } from 'lucide-react'
 import { ProtectedRoute } from '@/components/protected-route'
 import { useAuth } from '@/components/auth-provider'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import {
   getUserConversations,
   getConversationMessages,
@@ -18,8 +25,9 @@ import {
   type Message,
 } from '@/lib/data'
 
-export default function CustomerMessagesPage() {
+function CustomerMessagesContent() {
   const { user } = useAuth()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
@@ -49,11 +57,10 @@ export default function CustomerMessagesPage() {
       // Mark as read
       if (user) {
         markConversationAsRead(selectedConversation.id, user.id)
-        // Update conversations list
-        const updated = conversations.map(c => 
-          c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c
-        )
-        setConversations(updated)
+        // Update conversations list using functional update to avoid stale deps
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c))
+                )
       }
     }
   }, [selectedConversation, user])
@@ -172,12 +179,27 @@ export default function CustomerMessagesPage() {
                 You don't have any conversations yet. Start by booking a vendor and messaging them!
               </p>
               <Button asChild>
-                <a href="/vendors">Browse Vendors</a>
+                <Link href="/vendors">Browse Vendors</Link>
               </Button>
             </div>
           )}
         </main>
       </div>
     </ProtectedRoute>
+  )
+}
+
+export default function CustomerMessagesPage() {
+  // Next.js requires `useSearchParams()` to be used under a Suspense boundary.
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+          Loading...
+        </div>
+      }
+    >
+      <CustomerMessagesContent />
+    </Suspense>
   )
 }

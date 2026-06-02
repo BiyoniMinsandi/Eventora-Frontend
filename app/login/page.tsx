@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /login
+ * Purpose: Sign in using local/demo auth and redirect by role.
+ */
+
 import React from "react"
 
 import Link from 'next/link'
@@ -22,6 +27,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Local-only login: validate input, attempt auth, then redirect.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -34,7 +40,7 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    // Ensure admin demo account exists for local-only auth
+    // Ensure demo accounts exist (so first-time users can sign in).
     initializeDemoAccounts()
 
     const result = loginUser(email, password)

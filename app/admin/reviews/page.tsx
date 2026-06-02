@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /admin/reviews
+ * Purpose: Review moderation and management.
+ */
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'

@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * Route: /vendors
+ * Purpose: Browse approved vendors with basic client-side filtering.
+ * Note: Wrapped in Suspense because Next requires it for useSearchParams() in App Router.
+ */
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -13,7 +19,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import Loading from './loading'
 import { getStoredUsers, type User } from '@/lib/auth'
-import { getVendorAverageRating } from '@/lib/data'
+import { getVendorAverageRating, getVendorReviews } from '@/lib/data'
 
 export default function VendorBrowsePage() {
   const searchParams = useSearchParams()
@@ -23,7 +29,7 @@ export default function VendorBrowsePage() {
   const [showFilters, setShowFilters] = useState(false)
   const [vendors, setVendors] = useState<User[]>([])
 
-  // Initialize from URL parameters and load vendors
+  // Initialize filters from URL parameters and load approved vendors.
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     const searchParam = searchParams.get('search')
@@ -35,7 +41,7 @@ export default function VendorBrowsePage() {
       setSearchQuery(searchParam)
     }
 
-    // Load approved vendors from localStorage
+    // Load approved vendors from localStorage (local/demo persistence).
     const allUsers = getStoredUsers()
     const approvedVendors = allUsers.filter(u => u.role === 'vendor' && u.approved === true)
     setVendors(approvedVendors)
@@ -50,6 +56,7 @@ export default function VendorBrowsePage() {
     { value: 'music', label: 'Music & Entertainment' },
   ]
 
+  // Client-side filtering keeps this page static-friendly (no API required).
   const filteredVendors = vendors.filter((vendor) => {
     const matchesSearch = 
       vendor.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -158,7 +165,8 @@ export default function VendorBrowsePage() {
               {filteredVendors.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredVendors.map((vendor) => {
-                    const rating = getVendorAverageRating(vendor.id)
+                    const averageRating = getVendorAverageRating(vendor.id)
+                    const reviewCount = getVendorReviews(vendor.id).length
                     const firstPhoto = vendor.photos && vendor.photos.length > 0 ? vendor.photos[0] : null
                     
                     return (
@@ -166,12 +174,14 @@ export default function VendorBrowsePage() {
                         {/* Image */}
                         <div className="relative bg-muted h-48 w-full overflow-hidden">
                           {firstPhoto ? (
-                            <img
-                              src={firstPhoto}
-                              alt={vendor.businessName || vendor.fullName}
-                              className="object-cover w-full h-full"
-                            />
-                          ) : (
+                              <Image
+                                src={firstPhoto}
+                                alt={vendor.businessName || vendor.fullName}
+                                width={80}
+                                height={80}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
                               <span className="text-4xl font-bold text-primary/20">
                                 {(vendor.businessName || vendor.fullName).charAt(0)}
@@ -209,7 +219,7 @@ export default function VendorBrowsePage() {
                                 <Star
                                   key={i}
                                   className={`w-4 h-4 ${
-                                    i < Math.floor(rating.average)
+                                    i < Math.floor(averageRating)
                                       ? 'fill-accent text-accent'
                                       : 'text-muted-foreground'
                                   }`}
@@ -217,7 +227,7 @@ export default function VendorBrowsePage() {
                               ))}
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {rating.average > 0 ? rating.average.toFixed(1) : 'No reviews'} ({rating.count} reviews)
+                              {averageRating > 0 ? averageRating.toFixed(1) : 'No reviews'} ({reviewCount} reviews)
                             </span>
                           </div>
 

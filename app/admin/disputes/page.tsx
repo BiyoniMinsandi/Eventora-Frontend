@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /admin/disputes
+ * Purpose: View disputes and take admin actions.
+ */
+
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/sidebar'

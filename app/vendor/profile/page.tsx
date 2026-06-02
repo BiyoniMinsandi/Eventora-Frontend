@@ -1,6 +1,12 @@
 'use client'
 
+/**
+ * Route: /vendor/profile
+ * Purpose: Edit vendor profile details.
+ */
+
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -275,13 +281,15 @@ export default function VendorProfilePage() {
                 </Label>
               </div>
 
-              {formData.photos.length > 0 && (
+                  {formData.photos.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {formData.photos.map((photo, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={photo}
                         alt={`Portfolio ${index + 1}`}
+                        width={400}
+                        height={200}
                         className="w-full h-32 object-cover rounded-lg"
                       />
                       <button

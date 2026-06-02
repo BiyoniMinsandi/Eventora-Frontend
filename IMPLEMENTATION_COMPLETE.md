@@ -4,19 +4,19 @@
 
 ### Admin Account
 - **Email:** admin@example.com
-- **Password:** demo123
+- **Password:** Demo123
 - **Role:** Administrator
 - **Access:** Full platform management
 
 ### Vendor Account
 - **Email:** vendor@example.com
-- **Password:** demo123
+- **Password:** Demo123
 - **Role:** Vendor (Pre-approved)
 - **Status:** Approved and active
 
 ### Customer Account
 - **Email:** customer@example.com
-- **Password:** demo123
+- **Password:** Demo123
 - **Role:** Customer
 - **Status:** Active
 
@@ -291,7 +291,7 @@ Back buttons added to all pages for easy navigation without sidebar dependency:
 ## How to Test the System
 
 ### Test Vendor Approval Flow
-1. Login as Admin (admin@example.com / demo123)
+1. Login as Admin (admin@example.com / Demo123)
 2. Navigate to Admin → Approvals
 3. You'll see the pending vendor (or register a new one to test)
 4. Click "Approve" to accept vendor
@@ -299,9 +299,9 @@ Back buttons added to all pages for easy navigation without sidebar dependency:
 6. Check Notifications to see approval message
 
 ### Test Booking Workflow
-1. Login as Customer (customer@example.com / demo123)
+1. Login as Customer (customer@example.com / Demo123)
 2. Browse vendors and create a booking
-3. Login as Vendor (vendor@example.com / demo123)
+3. Login as Vendor (vendor@example.com / Demo123)
 4. Check Booking Requests
 5. Accept/Reject booking with response note
 6. Login as Customer - check notifications

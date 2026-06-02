@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /customer/profile
+ * Purpose: Customer profile management.
+ */
+
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -148,6 +153,7 @@ export default function CustomerProfilePage() {
             </div>
           </div>
 
+          {/* Profile Tabs */}
           <Tabs defaultValue="profile" className="w-full">
             <TabsList className="grid w-full md:w-max grid-cols-4">
               <TabsTrigger value="profile">Profile</TabsTrigger>

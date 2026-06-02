@@ -86,7 +86,22 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 export function getStoredUsers(): User[] {
   if (typeof window === 'undefined') return []
   const stored = localStorage.getItem(USERS_STORAGE_KEY)
-  return stored ? JSON.parse(stored) : []
+  if (!stored) return []
+
+  try {
+    const parsed = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.map((raw) => {
+      if (!raw || typeof raw !== 'object') return raw as User
+      const approvedValue = (raw as any).approved
+      const normalizedApproved =
+        approvedValue === 'true' ? true : approvedValue === 'false' ? false : approvedValue
+      return { ...(raw as any), approved: normalizedApproved } as User
+    })
+  } catch {
+    return []
+  }
 }
 
 /**

@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /
+ * Purpose: Public landing page + quick entry into vendor discovery.
+ */
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -25,6 +30,7 @@ export default function HomePage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Convert the hero search input into a vendors listing URL.
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
@@ -33,6 +39,8 @@ export default function HomePage() {
       router.push('/vendors')
     }
   }
+
+  // Category shortcuts (kept as data so UI stays simple to edit).
   const categories = [
     { icon: Camera, label: 'Photographers', href: '/vendors?category=photography' },
     { icon: Utensils, label: 'Caterers', href: '/vendors?category=catering' },
@@ -41,6 +49,7 @@ export default function HomePage() {
     { icon: Music, label: 'Musicians', href: '/vendors?category=music' },
   ]
 
+  // Static testimonials used as marketing content for the landing page.
   const testimonials = [
     {
       name: 'Priya Silva',
@@ -62,6 +71,7 @@ export default function HomePage() {
     },
   ]
 
+  // A simple “how it works” overview.
   const steps = [
     {
       number: '01',

@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/dashboard
+ * Purpose: Vendor home dashboard (booking pipeline + quick links).
+ */
+
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -28,6 +33,7 @@ export default function VendorDashboard() {
   const { user } = useAuth()
   const router = useRouter()
 
+  // Clears auth and returns to login.
   const handleLogout = () => {
     logoutUser()
     router.push('/login')
@@ -42,6 +48,7 @@ export default function VendorDashboard() {
 
   useEffect(() => {
     if (user) {
+      // Load vendor bookings and derived stats from local storage.
       const vendorBookings = getUserBookings(user.id, 'vendor')
       setBookings(vendorBookings)
       const bookingStats = getBookingStats(user.id, 'vendor')
@@ -86,6 +93,7 @@ export default function VendorDashboard() {
     })
   }
 
+  // Small helpers to keep render logic readable.
   const getPendingBookings = () => bookings.filter(b => b.status === 'pending')
   const getAcceptedBookings = () => bookings.filter(b => b.status === 'accepted')
 

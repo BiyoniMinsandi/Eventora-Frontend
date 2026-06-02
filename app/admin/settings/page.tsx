@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /admin/settings
+ * Purpose: Platform configuration screens (demo/local persistence).
+ */
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -120,7 +125,10 @@ export default function AdminSettings() {
   const handleGenerateKey = () => {
     const id = `key_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     const key = `evt_${Math.random().toString(36).slice(2, 18)}`
-    const next = [{ id, key, createdAt: new Date().toLocaleDateString(), status: 'active' as const }, ...apiKeys]
+    const next: typeof apiKeys = [
+      { id, key, createdAt: new Date().toLocaleDateString(), status: 'active' },
+      ...apiKeys,
+    ]
     persistKeys(next)
   }
 
@@ -134,7 +142,9 @@ export default function AdminSettings() {
   }
 
   const handleRevokeKey = (id: string) => {
-    const next = apiKeys.map((k) => (k.id === id ? { ...k, status: 'revoked' } : k))
+    const next: typeof apiKeys = apiKeys.map((k) =>
+      k.id === id ? { ...k, status: 'revoked' as const } : k
+    )
     persistKeys(next)
   }
 

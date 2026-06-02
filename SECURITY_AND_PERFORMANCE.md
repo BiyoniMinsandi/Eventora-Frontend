@@ -585,9 +585,9 @@ try {
 ### 1. Test JWT Authentication
 ```bash
 # Login with credentials
-admin@example.com / demo123
-vendor@example.com / demo123
-customer@example.com / demo123
+admin@example.com / Demo123
+vendor@example.com / Demo123
+customer@example.com / Demo123
 
 # Check token in localStorage
 localStorage.getItem('eventora_jwt_token')

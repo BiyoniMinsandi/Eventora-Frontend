@@ -1,6 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+/**
+ * Route: /customer/disputes
+ * Purpose: Create disputes and track their status.
+ */
+
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -23,7 +28,7 @@ interface DisputeFormData {
   priority: 'low' | 'medium' | 'high'
 }
 
-export default function CustomerDisputesPage() {
+function CustomerDisputesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -404,5 +409,21 @@ export default function CustomerDisputesPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function CustomerDisputesPage() {
+  // Next.js requires `useSearchParams()` to be used under a Suspense boundary.
+  // Keeping the hook in the inner component avoids prerender build errors.
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+          Loading...
+        </div>
+      }
+    >
+      <CustomerDisputesContent />
+    </Suspense>
   )
 }

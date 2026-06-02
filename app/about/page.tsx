@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /about
+ * Purpose: Explain what Eventora is and the platform values.
+ */
+
 import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
@@ -8,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { CheckCircle2, Users, Zap, Shield, Award, Globe } from 'lucide-react'
 
 export default function AboutPage() {
+  // Content is modeled as arrays to keep the JSX clean.
   const teamMembers = [
     {
       name: 'Priya Kandasamy',

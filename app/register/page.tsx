@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /register
+ * Purpose: Create a customer or vendor account (vendor accounts require admin approval).
+ */
+
 import React from "react"
 
 import Link from 'next/link'
@@ -31,12 +36,13 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Registration is local-only: validate fields, create user, then redirect.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccess('')
 
-    // Validation
+    // Basic validation (keep UX fast, avoid calling auth with invalid state).
     if (!fullName || !email || !password || !confirmPassword) {
       setError('Please fill in all required fields')
       return
@@ -57,7 +63,7 @@ export default function RegisterPage() {
       return
     }
 
-    // Email validation
+    // Email validation (simple regex for client-side feedback).
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address')
@@ -79,6 +85,7 @@ export default function RegisterPage() {
 
     if (result.success && result.user) {
       if (role === 'vendor') {
+        // Vendors go to login after showing an approval message.
         setSuccess('Vendor registration successful! Your account is pending admin approval. You will be notified once approved.')
         setLoading(false)
         setTimeout(() => {

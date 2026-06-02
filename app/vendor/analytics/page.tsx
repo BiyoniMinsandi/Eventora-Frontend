@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/analytics
+ * Purpose: Vendor analytics charts derived from bookings.
+ */
+
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'

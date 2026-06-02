@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# Eventora-Frontend
-=======
 # Eventora - Event Vendor Marketplace
 
 A complete event vendor marketplace application built with **Next.js 16** and **Tailwind CSS 4**.
@@ -77,15 +74,15 @@ You can use these pre-configured demo accounts:
 
 - **Customer**: 
   - Email: `customer@example.com`
-  - Password: `demo123`
+  - Password: `Demo123`
 
 - **Vendor**: 
   - Email: `vendor@example.com`
-  - Password: `demo123`
+  - Password: `Demo123`
 
 - **Admin**: 
   - Email: `admin@example.com`
-  - Password: `demo123`
+  - Password: `Demo123`
 
 ### Register New Account
 
@@ -212,4 +209,3 @@ This project is for demonstration purposes.
 ## Support
 
 For issues or questions, please check the code comments or create an issue in the repository.
->>>>>>> 00f1789 (Create frontend of Eventora)

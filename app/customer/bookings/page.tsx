@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /customer/bookings
+ * Purpose: Customer booking list + related actions (messages/reviews/disputes).
+ */
+
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -104,6 +109,7 @@ export default function CustomerBookingsPage() {
             </div>
           </div>
 
+          {/* Booking Tabs */}
           <Tabs defaultValue="all" className="w-full">
             <TabsList className="grid w-full md:w-max grid-cols-5">
               <TabsTrigger value="all">All</TabsTrigger>

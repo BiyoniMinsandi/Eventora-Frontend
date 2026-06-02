@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/requests
+ * Purpose: Incoming booking requests (accept/reject + message).
+ */
+
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'

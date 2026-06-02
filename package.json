@@ -5,8 +5,9 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "deb": "next dev",
     "dev:clean": "powershell -NoProfile -Command \"if (Test-Path .next\\dev\\lock) { Remove-Item .next\\dev\\lock -Force }; npm run dev\"",
-    "lint": "eslint .",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.mjs,.cjs",
     "start": "next start"
   },
   "dependencies": {
@@ -66,6 +67,8 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.7",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",

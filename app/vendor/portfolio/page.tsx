@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/portfolio
+ * Purpose: Manage portfolio images and showcase content.
+ */
+
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -30,7 +35,7 @@ interface PortfolioItem {
 }
 
 export default function VendorPortfolio() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const router = useRouter()
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -38,6 +43,12 @@ export default function VendorPortfolio() {
     title: '',
     description: '',
   })
+
+  const handleLogout = () => {
+    // Centralize logout behavior so Sidebar can just call one handler.
+    logout()
+    router.push('/login')
+  }
 
   useEffect(() => {
     if (user?.services) {

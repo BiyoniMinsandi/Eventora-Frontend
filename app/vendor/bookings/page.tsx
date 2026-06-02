@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/bookings
+ * Purpose: View and manage vendor bookings.
+ */
+
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -114,6 +119,7 @@ export default function VendorBookingsPage() {
               </div>
             </div>
 
+            {/* Booking Tabs */}
             <Tabs defaultValue="all" className="w-full">
               <TabsList className="grid w-full md:w-max grid-cols-4">
                 <TabsTrigger value="all">All</TabsTrigger>

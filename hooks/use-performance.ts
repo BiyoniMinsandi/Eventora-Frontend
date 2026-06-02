@@ -72,6 +72,9 @@ export function useMemoizedComputation<T extends any>(
       globalCache.set(key, result)
       setValue(result)
     }
+  // `deps` is intentionally passed in from the caller. Disable exhaustive-deps
+  // for this specific pattern where the dependency array is dynamic.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 
   return value
@@ -112,29 +115,39 @@ export function useThrottle<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 500
 ): T {
-  const lastRunRef = useRef(Date.now())
+  const lastRunRef = useRef<number>(0)
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
-  return useCallback(
-    ((...args: any[]) => {
-      const now = Date.now()
-      const timeSinceLastRun = now - lastRunRef.current
+  const throttled = useCallback((...args: Parameters<T>) => {
+    const now = Date.now()
+    const lastRun = lastRunRef.current
 
-      if (timeSinceLastRun >= delay) {
-        callback(...args)
-        lastRunRef.current = now
-      } else {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current)
-        }
-        timeoutRef.current = setTimeout(() => {
-          callback(...args)
-          lastRunRef.current = Date.now()
-        }, delay - timeSinceLastRun)
-      }
-    }) as T,
-    [callback, delay]
-  )
+    // First call should run immediately.
+    if (lastRun === 0) {
+      lastRunRef.current = now
+      callback(...args)
+      return
+    }
+
+    const timeSinceLastRun = now - lastRun
+
+    if (timeSinceLastRun >= delay) {
+      lastRunRef.current = now
+      callback(...args)
+      return
+    }
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      lastRunRef.current = Date.now()
+      callback(...args)
+    }, delay - timeSinceLastRun)
+  }, [callback, delay])
+
+  return throttled as T
 }
 
 /**

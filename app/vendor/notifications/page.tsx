@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/notifications
+ * Purpose: Vendor notification center.
+ */
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'

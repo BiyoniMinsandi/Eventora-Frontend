@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /customer/settings
+ * Purpose: Customer settings (security + notifications + preferences).
+ */
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -29,15 +34,15 @@ export default function CustomerSettings() {
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}flex items-center gap-4 mb-8">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
             <Button variant="ghost" size="icon" onClick={() => router.back()}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Settings</h1>
               <p className="text-muted-foreground">Manage your account preferences and privacy</p>
-            </div
-            <p className="text-muted-foreground">Manage your account preferences and privacy</p>
+            </div>
           </div>
 
           {/* Tabs */}

@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /vendor/messages
+ * Purpose: Vendor inbox + conversation view.
+ */
+
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -48,10 +53,9 @@ export default function VendorMessagesPage() {
 
       if (user) {
         markConversationAsRead(selectedConversation.id, user.id)
-        const updated = conversations.map((c) =>
-          c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c
+        setConversations((prev) =>
+          prev.map((c) => (c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c))
         )
-        setConversations(updated)
       }
     }
   }, [selectedConversation, user])

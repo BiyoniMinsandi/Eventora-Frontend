@@ -1,5 +1,10 @@
 "use client"
 
+/**
+ * Route: /admin/users
+ * Purpose: User management (search/filter + basic user actions).
+ */
+
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'

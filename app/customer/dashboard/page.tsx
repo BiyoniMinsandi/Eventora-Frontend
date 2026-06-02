@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /customer/dashboard
+ * Purpose: Customer home dashboard (bookings summary + quick actions).
+ */
+
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -24,6 +29,7 @@ export default function CustomerDashboard() {
   const { user } = useAuth()
   const router = useRouter()
 
+  // Clears auth and returns to login.
   const handleLogout = () => {
     logoutUser()
     router.push('/login')
@@ -38,6 +44,7 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     if (user) {
+      // Load recent bookings and derived stats from local storage.
       const userBookings = getUserBookings(user.id, 'customer')
       setBookings(userBookings.slice(0, 3)) // Latest 3 bookings
       const bookingStats = getBookingStats(user.id, 'customer')
@@ -71,6 +78,7 @@ export default function CustomerDashboard() {
     },
   ]
 
+  // Map booking status to a consistent badge color.
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'accepted':

@@ -1,5 +1,13 @@
 'use client'
 
+/**
+ * Route: /vendors/[id]
+ * Purpose: Public vendor profile page (reads vendor + reviews from local storage).
+ */
+
+import Image from 'next/image'
+
+// Other imports...
 import Link from 'next/link'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
@@ -24,6 +32,7 @@ export default function VendorProfilePage({ params }: VendorProfilePageProps) {
   const [avgRating, setAvgRating] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Normalizes a name into a slug so profiles can be visited by id or by a readable name.
   const normalizeSlug = (value: string) =>
     value
       .toLowerCase()
@@ -31,11 +40,13 @@ export default function VendorProfilePage({ params }: VendorProfilePageProps) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
 
+  // Only approved vendors should be visible on public pages.
   const isApprovedVendor = (candidate: User) =>
     candidate.role === 'vendor' &&
-    (candidate.approved === true || candidate.approved === 'true' || Boolean(candidate.approvedAt))
+    (candidate.approved === true || Boolean(candidate.approvedAt))
 
   useEffect(() => {
+    // Locate the vendor from localStorage. Supports both exact id and slug-based URLs.
     const allUsers = getStoredUsers()
     const paramId = decodeURIComponent(params.id)
     const found =
@@ -50,7 +61,7 @@ export default function VendorProfilePage({ params }: VendorProfilePageProps) {
   }, [params.id])
 
   useEffect(() => {
-    // Load real reviews from localStorage
+    // Load reviews and compute the average rating for this vendor.
     const vendorReviews = getVendorReviews(params.id)
     setReviews(vendorReviews)
     const rating = getVendorAverageRating(params.id)
@@ -256,15 +267,17 @@ export default function VendorProfilePage({ params }: VendorProfilePageProps) {
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {galleryPhotos.map((photo, index) => (
-                      <div
+                        <div
                         key={`${vendor.id}-photo-${index}`}
                         className="relative bg-muted rounded-lg h-40 overflow-hidden border border-border hover:border-primary transition cursor-pointer group"
                       >
-                        <img
-                          src={photo}
-                          alt={`Vendor photo ${index + 1}`}
-                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
-                        />
+                          <Image
+                            src={photo}
+                            alt={`Vendor photo ${index + 1}`}
+                            width={800}
+                            height={400}
+                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                          />
                       </div>
                     ))}
                   </div>

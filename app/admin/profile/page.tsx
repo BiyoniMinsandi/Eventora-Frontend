@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Route: /admin/profile
+ * Purpose: Admin account profile + security settings.
+ */
+
 import { useEffect, useMemo, useState } from 'react'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
@@ -100,7 +105,10 @@ export default function AdminProfilePage() {
   const handleGenerateKey = () => {
     const id = `key_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
     const key = `evt_${Math.random().toString(36).slice(2, 18)}`
-    const next = [{ id, key, createdAt: new Date().toLocaleDateString(), status: 'active' as const }, ...apiKeys]
+    const next: typeof apiKeys = [
+      { id, key, createdAt: new Date().toLocaleDateString(), status: 'active' },
+      ...apiKeys,
+    ]
     persistKeys(next)
   }
 
@@ -114,7 +122,9 @@ export default function AdminProfilePage() {
   }
 
   const handleRevokeKey = (id: string) => {
-    const next = apiKeys.map((k) => (k.id === id ? { ...k, status: 'revoked' } : k))
+    const next: typeof apiKeys = apiKeys.map((k) =>
+      k.id === id ? { ...k, status: 'revoked' as const } : k
+    )
     persistKeys(next)
   }
 

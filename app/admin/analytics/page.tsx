@@ -1,5 +1,10 @@
  'use client'
 
+/**
+ * Route: /admin/analytics
+ * Purpose: Admin analytics charts derived from stored bookings.
+ */
+
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Card } from '@/components/ui/card'
@@ -75,11 +80,14 @@ export default function AdminAnalytics() {
   }, [])
 
   const start = useMemo(() => startDateForRange(range), [range])
-  const end = useMemo(() => new Date(), [range])
+  const end = useMemo(() => new Date(), [])
 
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
-      const t = new Date(b.createdAt || b.eventDate || Date.now())
+      const raw = b.createdAt ?? b.eventDate
+      if (!raw) return false
+
+      const t = new Date(raw)
       return t >= start && t <= end
     })
   }, [bookings, start, end])
