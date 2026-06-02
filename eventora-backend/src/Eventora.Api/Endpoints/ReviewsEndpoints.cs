@@ -17,6 +17,29 @@ internal static class ReviewsEndpoints
             return Results.Ok(list.Select(ReviewDtoMapping.ToDto));
         });
 
+        // Public endpoint for the homepage testimonials — returns the most recent reviews.
+        group.MapGet("/recent", async (int? limit, IReviewRepository reviews, IUserRepository users, CancellationToken ct) =>
+        {
+            var take = Math.Clamp(limit ?? 6, 1, 12);
+            var list = await reviews.GetRecentAsync(take, ct);
+
+            var dtos = new List<object>();
+            foreach (var r in list)
+            {
+                var vendor = await users.GetByIdAsync(r.VendorId, ct);
+                dtos.Add(new
+                {
+                    id = r.Id,
+                    customerName = r.CustomerName,
+                    vendorName = vendor?.BusinessName ?? vendor?.FullName ?? "Vendor",
+                    rating = r.Rating,
+                    comment = r.Comment,
+                    createdAt = r.CreatedAt.ToString("O"),
+                });
+            }
+            return Results.Ok(dtos);
+        });
+
         group.MapPost("", async (
             CreateReviewRequest req,
             ClaimsPrincipal principal,

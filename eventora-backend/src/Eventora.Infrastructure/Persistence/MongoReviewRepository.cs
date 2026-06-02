@@ -24,6 +24,15 @@ internal sealed class MongoReviewRepository(MongoCollections collections) : IRev
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Review>> GetRecentAsync(int limit, CancellationToken ct)
+    {
+        return await _reviews
+            .Find(Builders<Review>.Filter.Empty)
+            .SortByDescending(r => r.CreatedAt)
+            .Limit(limit)
+            .ToListAsync(ct);
+    }
+
     public async Task CreateAsync(Review review, CancellationToken ct)
     {
         MongoId.EnsureId(review, r => r.Id, (r, v) => r.Id = v);

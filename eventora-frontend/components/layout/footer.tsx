@@ -2,6 +2,15 @@
 
 import Link from 'next/link'
 
+// ── Update these with real social media URLs ───────────────────────────────
+const SOCIAL = {
+  facebook: 'https://facebook.com/eventora',
+  instagram: 'https://instagram.com/eventora',
+  twitter: 'https://x.com/eventora',
+}
+const SUPPORT_EMAIL = 'support@eventora.lk'
+// ───────────────────────────────────────────────────────────────────────────
+
 export function Footer() {
   const currentYear = new Date().getFullYear()
 
@@ -71,13 +80,18 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:support@eventora.lk" className="text-muted-foreground hover:text-primary">
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-muted-foreground hover:text-primary">
                   Email Support
                 </a>
               </li>
               <li>
                 <Link href="/faq" className="text-muted-foreground hover:text-primary">
                   FAQ
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-muted-foreground hover:text-primary">
+                  Contact Us
                 </Link>
               </li>
             </ul>
@@ -90,14 +104,14 @@ export function Footer() {
             &copy; {currentYear} Eventora. All rights reserved.
           </p>
           <div className="flex gap-6 mt-4 md:mt-0">
-            <a href="#" className="text-muted-foreground hover:text-primary text-sm">
+            <a href={SOCIAL.facebook} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-sm">
               Facebook
             </a>
-            <a href="#" className="text-muted-foreground hover:text-primary text-sm">
+            <a href={SOCIAL.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-sm">
               Instagram
             </a>
-            <a href="#" className="text-muted-foreground hover:text-primary text-sm">
-              Twitter
+            <a href={SOCIAL.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-sm">
+              Twitter / X
             </a>
           </div>
         </div>

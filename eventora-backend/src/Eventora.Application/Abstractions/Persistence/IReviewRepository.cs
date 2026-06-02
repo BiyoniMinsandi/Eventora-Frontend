@@ -9,5 +9,6 @@ public interface IReviewRepository
 {
     Task<Review?> GetByBookingIdAsync(string bookingId, CancellationToken ct);
     Task<IReadOnlyList<Review>> GetForVendorAsync(string vendorId, CancellationToken ct);
+    Task<IReadOnlyList<Review>> GetRecentAsync(int limit, CancellationToken ct);
     Task CreateAsync(Review review, CancellationToken ct);
 }

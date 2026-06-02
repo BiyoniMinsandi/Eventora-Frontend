@@ -5,13 +5,15 @@
  * Purpose: Public landing page + quick entry into vendor discovery.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { apiFetch } from '@/lib/api'
 import {
   Camera,
   Users,
@@ -26,9 +28,35 @@ import {
   Heart,
 } from 'lucide-react'
 
+interface RecentReview {
+  id: string
+  customerName: string
+  vendorName: string
+  rating: number
+  comment: string
+  createdAt: string
+}
+
 export default function HomePage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
+  const [reviews, setReviews] = useState<RecentReview[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const data = await apiFetch<RecentReview[]>('/api/reviews/recent?limit=6', { auth: false })
+        if (!cancelled) setReviews(data)
+      } catch {
+        // silently ignore — section just stays hidden
+      } finally {
+        if (!cancelled) setReviewsLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   // Convert the hero search input into a vendors listing URL.
   const handleSearch = (e: React.FormEvent) => {
@@ -49,29 +77,6 @@ export default function HomePage() {
     { icon: Music, label: 'Musicians', href: '/vendors?category=music' },
   ]
 
-  // Static testimonials used as marketing content for the landing page.
-  const testimonials = [
-    {
-      name: 'Priya Silva',
-      role: 'Bride',
-      content: 'Eventora made finding vendors for my wedding so easy! Every vendor was professional and highly rated.',
-      rating: 5,
-    },
-    {
-      name: 'Rajesh Kumar',
-      role: 'Event Organizer',
-      content: 'The booking system is intuitive and the vendor quality is consistently excellent.',
-      rating: 5,
-    },
-    {
-      name: 'Ananya Perera',
-      role: 'Corporate Client',
-      content: 'We used multiple vendors from Eventora for our corporate event and everything was flawless.',
-      rating: 5,
-    },
-  ]
-
-  // A simple “how it works” overview.
   const steps = [
     {
       number: '01',
@@ -197,28 +202,42 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="py-16 md:py-24 bg-muted/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">What Our Customers Say</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial) => (
-                <div key={testimonial.name} className="bg-card p-6 rounded-lg border border-border">
-                  <div className="flex gap-1 mb-4">
-                    {Array.from({ length: testimonial.rating }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-accent text-accent" />
+        {/* Testimonials — real reviews from the database */}
+        {(reviewsLoading || reviews.length > 0) && (
+          <section className="py-16 md:py-24 bg-muted/30">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">What Our Customers Say</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                {reviewsLoading
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="bg-card p-6 rounded-lg border border-border space-y-3">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-3 w-1/3" />
+                      </div>
+                    ))
+                  : reviews.map((review) => (
+                      <div key={review.id} className="bg-card p-6 rounded-lg border border-border">
+                        <div className="flex gap-1 mb-4">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${i < review.rating ? 'fill-accent text-accent' : 'text-muted-foreground'}`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-foreground mb-4 line-clamp-4">{`"${review.comment}"`}</p>
+                        <div>
+                          <p className="font-semibold text-sm">{review.customerName}</p>
+                          <p className="text-xs text-muted-foreground">Reviewed {review.vendorName}</p>
+                        </div>
+                      </div>
                     ))}
-                  </div>
-                  <p className="text-foreground mb-4">{`"${testimonial.content}"`}</p>
-                  <div>
-                    <p className="font-semibold text-sm">{testimonial.name}</p>
-                    <p className="text-xs text-muted-foreground">{testimonial.role}</p>
-                  </div>
-                </div>
-              ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* CTA Section */}
         <section className="py-16 md:py-24">
