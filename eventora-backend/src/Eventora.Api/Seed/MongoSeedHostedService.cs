@@ -39,7 +39,7 @@ public sealed class MongoSeedHostedService : IHostedService
         }
 
         using var seedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        seedCts.CancelAfter(TimeSpan.FromSeconds(10));
+        seedCts.CancelAfter(TimeSpan.FromSeconds(60));
         var ct = seedCts.Token;
 
         var db = _dbFactory.GetDatabase();
@@ -281,6 +281,521 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-5),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        // ── 10 Additional Approved Vendors ───────────────────────────────────────
+
+        var vendor7 = await UpsertUserAsync(users, new User
+        {
+            Email        = "niluka@example.com",
+            FullName     = "Niluka Jayasinghe",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94707777777",
+            BusinessName = "Niluka Photography Studio",
+            Category     = "photography",
+            Location     = "Kandy",
+            Description  = "Based in the heart of Kandy, Niluka Photography Studio has been capturing the most cherished moments of Sri Lankan families for over nine years. Our studio team of five photographers specialises in intimate weddings, pre-wedding shoots against the stunning Kandyan backdrop, and vibrant cultural ceremonies. We combine traditional documentary-style photography with fine-art portrait techniques, delivering galleries that feel alive and deeply personal.\n\nEvery wedding package includes an on-site consultation at our Kandy studio, a full engagement shoot, unlimited edited high-resolution images, a luxury printed album, and a same-day highlights reel. Our drone operator provides breathtaking aerial views of your ceremony venue — whether it's the iconic Kandy Lake, a heritage hotel, or a lush hillside estate.\n\nWe have photographed over 400 weddings and have been featured in three leading Sri Lankan bridal magazines. Our work reflects our belief that photography is not just about pictures — it's about preserving the emotions, laughter, and tears that make each event uniquely yours.",
+            Services     = [
+                "Full Day Wedding Photography:Rs. 65,000",
+                "Engagement Shoot:Rs. 18,000",
+                "Drone Aerial Photography:Rs. 25,000",
+                "Luxury Printed Album:Rs. 15,000",
+                "Same-Day Edit Highlights:Rs. 20,000",
+                "Corporate Event Photography:Rs. 35,000",
+                "Cultural Ceremony Coverage:Rs. 40,000",
+            ],
+            Pricing      = "Rs. 35,000 – 120,000",
+            PriceMin     = 35000,
+            PriceMax     = 120000,
+            Experience   = "9 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=800",
+                "https://images.unsplash.com/photo-1519741497674-611481863552?w=800",
+                "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800",
+                "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800",
+                "https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=800",
+                "https://images.unsplash.com/photo-1591604021695-0c69b7c05981?w=800",
+                "https://picsum.photos/seed/niluka01/800/600",
+                "https://picsum.photos/seed/niluka02/800/600",
+                "https://picsum.photos/seed/niluka03/800/600",
+                "https://picsum.photos/seed/niluka04/800/600",
+                "https://picsum.photos/seed/niluka05/800/600",
+                "https://picsum.photos/seed/niluka06/800/600",
+                "https://picsum.photos/seed/niluka07/800/600",
+                "https://picsum.photos/seed/niluka08/800/600",
+                "https://picsum.photos/seed/niluka09/800/600",
+                "https://picsum.photos/seed/niluka10/800/600",
+                "https://picsum.photos/seed/niluka11/800/600",
+                "https://picsum.photos/seed/niluka12/800/600",
+                "https://picsum.photos/seed/niluka13/800/600",
+                "https://picsum.photos/seed/niluka14/800/600",
+                "https://picsum.photos/seed/niluka15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-50),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor8 = await UpsertUserAsync(users, new User
+        {
+            Email        = "spiceroute@example.com",
+            FullName     = "Raveendra Muthu",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94708888888",
+            BusinessName = "Spice Route Catering",
+            Category     = "catering",
+            Location     = "Negombo",
+            Description  = "Spice Route Catering was born from a passion for authentic Sri Lankan flavours and a desire to bring exceptional culinary experiences to every celebration. Founded in Negombo in 2016, we have grown from a small family kitchen into one of the most sought-after catering services on the Western coast. Our head chef, Raveendra Muthu, trained in both Colombo and Singapore and brings a fusion sensibility to traditional recipes without losing their heart.\n\nOur menus range from full traditional Sri Lankan rice-and-curry spreads to contemporary fusion tapas, live kottu stations, and international buffets for corporate events. We source our spices directly from certified farms in Matale and our seafood daily from Negombo fish markets, ensuring freshness that is unmatched. All dietary requirements — vegan, halal, gluten-free — are accommodated without compromise.\n\nWith a fleet of refrigerated vehicles and a professional service team of 30, we handle events from 50 to 2,000 guests. Our hygiene certification is renewed annually and we hold full liability insurance. Past clients include leading hotel chains, government functions, and three celebrity weddings.",
+            Services     = [
+                "Traditional Sri Lankan Buffet (per head):Rs. 1,500",
+                "Fusion International Buffet (per head):Rs. 2,200",
+                "Live Cooking Station Setup:Rs. 45,000",
+                "Seafood BBQ Package:Rs. 85,000",
+                "Corporate Lunch Box Service:Rs. 800 per box",
+                "Dessert Table & Wedding Cake:Rs. 35,000",
+                "Full Event Staffing (per person per day):Rs. 3,500",
+            ],
+            Pricing      = "Rs. 800 – 4,500 per head",
+            PriceMin     = 800,
+            PriceMax     = 4500,
+            Experience   = "8 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1555244162-803834f70033?w=800",
+                "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
+                "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
+                "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800",
+                "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800",
+                "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800",
+                "https://picsum.photos/seed/spice01/800/600",
+                "https://picsum.photos/seed/spice02/800/600",
+                "https://picsum.photos/seed/spice03/800/600",
+                "https://picsum.photos/seed/spice04/800/600",
+                "https://picsum.photos/seed/spice05/800/600",
+                "https://picsum.photos/seed/spice06/800/600",
+                "https://picsum.photos/seed/spice07/800/600",
+                "https://picsum.photos/seed/spice08/800/600",
+                "https://picsum.photos/seed/spice09/800/600",
+                "https://picsum.photos/seed/spice10/800/600",
+                "https://picsum.photos/seed/spice11/800/600",
+                "https://picsum.photos/seed/spice12/800/600",
+                "https://picsum.photos/seed/spice13/800/600",
+                "https://picsum.photos/seed/spice14/800/600",
+                "https://picsum.photos/seed/spice15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-45),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor9 = await UpsertUserAsync(users, new User
+        {
+            Email        = "enchanteddecor@example.com",
+            FullName     = "Sanduni Wickramasinghe",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94709999999",
+            BusinessName = "Enchanted Decor",
+            Category     = "decoration",
+            Location     = "Galle",
+            Description  = "Enchanted Decor is a boutique event-styling studio based in Galle, renowned for transforming spaces into fairy-tale environments. Our founder, Sanduni Wickramasinghe, graduated with a degree in Interior Design from the University of Moratuwa and spent four years working with event design firms in Dubai before returning to Sri Lanka to bring world-class aesthetics to local celebrations.\n\nWe specialise in bespoke floral design, fabric draping, illuminated installations, and themed décor concepts. Each project begins with a detailed brief and mood-board session. We source our flowers from our own greenhouse outside Galle, giving us full control over quality and seasonality. Our signature styles range from rustic boho garden parties to opulent crystal-adorned ballroom galas.\n\nEnchanted Decor has styled over 250 weddings, 80 corporate launches, and 40 birthday celebrations. We are proud winners of the South Sri Lanka Event Design Award 2024 and regularly collaborate with boutique hotels along the Southern Coast. Our full team of 12 decorators is available for events from Galle to Colombo.",
+            Services     = [
+                "Full Venue Transformation:Rs. 120,000",
+                "Floral Arrangements & Centrepieces:Rs. 45,000",
+                "Fabric Draping & Canopy Setup:Rs. 35,000",
+                "Illuminated Backdrop Design:Rs. 55,000",
+                "Table Linen & Crockery Package:Rs. 25,000",
+                "Balloon Art Installations:Rs. 18,000",
+                "Photo Booth Styling:Rs. 12,000",
+            ],
+            Pricing      = "Rs. 12,000 – 200,000",
+            PriceMin     = 12000,
+            PriceMax     = 200000,
+            Experience   = "6 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=800",
+                "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800",
+                "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800",
+                "https://images.unsplash.com/photo-1553531087-b25d5dc7e614?w=800",
+                "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800",
+                "https://picsum.photos/seed/enchant01/800/600",
+                "https://picsum.photos/seed/enchant02/800/600",
+                "https://picsum.photos/seed/enchant03/800/600",
+                "https://picsum.photos/seed/enchant04/800/600",
+                "https://picsum.photos/seed/enchant05/800/600",
+                "https://picsum.photos/seed/enchant06/800/600",
+                "https://picsum.photos/seed/enchant07/800/600",
+                "https://picsum.photos/seed/enchant08/800/600",
+                "https://picsum.photos/seed/enchant09/800/600",
+                "https://picsum.photos/seed/enchant10/800/600",
+                "https://picsum.photos/seed/enchant11/800/600",
+                "https://picsum.photos/seed/enchant12/800/600",
+                "https://picsum.photos/seed/enchant13/800/600",
+                "https://picsum.photos/seed/enchant14/800/600",
+                "https://picsum.photos/seed/enchant15/800/600",
+                "https://picsum.photos/seed/enchant16/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-40),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor10 = await UpsertUserAsync(users, new User
+        {
+            Email        = "paradisevenues@example.com",
+            FullName     = "Thilanka Gunawardena",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94710000001",
+            BusinessName = "Paradise Garden Venues",
+            Category     = "venues",
+            Location     = "Kandy",
+            Description  = "Perched on a verdant hillside overlooking the Mahaweli River, Paradise Garden Venues offers two stunning event spaces that blend natural beauty with modern luxury. Our flagship Garden Pavilion seats 350 guests under a retractable glass roof, surrounded by manicured tropical gardens, koi ponds, and a cascading water feature. For more intimate gatherings, the Riverside Terrace accommodates 80 guests with open-air seating and river views that are unmatched in Kandy.\n\nEvery booking includes comprehensive event management support, in-house furniture (Chiavari chairs, round tables, custom linens), a full lighting rig, and dedicated parking for 200 vehicles. We maintain partnerships with top-tier caterers, florists, and entertainment agencies in Kandy, allowing us to offer complete event packages. Our professional events coordinator is available from the planning stage through to the final send-off.\n\nParadise Garden Venues has hosted weddings for diplomats, corporate retreats for multinational companies, and debut performances for acclaimed local artists. Our venue is TripAdvisor's top-rated event space in the Central Province for three consecutive years.",
+            Services     = [
+                "Garden Pavilion (full day):Rs. 180,000",
+                "Riverside Terrace (half day):Rs. 65,000",
+                "Complete Wedding Package:Rs. 350,000",
+                "Corporate Retreat Package:Rs. 220,000",
+                "AV & Lighting Rig:Rs. 40,000",
+                "Valet Parking Service:Rs. 15,000",
+                "Overnight Accommodation Coordination:Rs. 25,000",
+            ],
+            Pricing      = "Rs. 65,000 – 500,000",
+            PriceMin     = 65000,
+            PriceMax     = 500000,
+            Experience   = "11 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800",
+                "https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?w=800",
+                "https://images.unsplash.com/photo-1549451371-64aa98a6f660?w=800",
+                "https://images.unsplash.com/photo-1561912774-79769a0a0a7a?w=800",
+                "https://images.unsplash.com/photo-1561329598-02ad5571cb74?w=800",
+                "https://picsum.photos/seed/paradise01/800/600",
+                "https://picsum.photos/seed/paradise02/800/600",
+                "https://picsum.photos/seed/paradise03/800/600",
+                "https://picsum.photos/seed/paradise04/800/600",
+                "https://picsum.photos/seed/paradise05/800/600",
+                "https://picsum.photos/seed/paradise06/800/600",
+                "https://picsum.photos/seed/paradise07/800/600",
+                "https://picsum.photos/seed/paradise08/800/600",
+                "https://picsum.photos/seed/paradise09/800/600",
+                "https://picsum.photos/seed/paradise10/800/600",
+                "https://picsum.photos/seed/paradise11/800/600",
+                "https://picsum.photos/seed/paradise12/800/600",
+                "https://picsum.photos/seed/paradise13/800/600",
+                "https://picsum.photos/seed/paradise14/800/600",
+                "https://picsum.photos/seed/paradise15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-35),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor11 = await UpsertUserAsync(users, new User
+        {
+            Email        = "soundwave@example.com",
+            FullName     = "Hasitha Amaratunga",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94710000002",
+            BusinessName = "Sound Wave Entertainment",
+            Category     = "music",
+            Location     = "Gampaha",
+            Description  = "Sound Wave Entertainment is the Western Province's premier full-service music and entertainment company. Led by Hasitha Amaratunga — a classically trained musician and professional DJ with 11 years in the industry — our team of eight artists covers everything from string quartets for ceremony ceremonies to high-energy DJ sets that keep dancefloors packed until midnight.\n\nOur equipment inventory includes a professional-grade Meyer Sound PA system, an 8-channel LED moving-head lighting rig, a custom-built DJ booth, and a full live band backline. All equipment is PAT-tested and maintained quarterly. We also offer karaoke systems, photobooth integration, and interactive entertainment packages for children's events.\n\nWe have performed at over 600 events including three presidential functions, six international conferences at Colombo's top hotels, and hundreds of private weddings. Sound Wave Entertainment is fully insured and holds all relevant performance licences. Our bilingual MCs are experienced in both Sinhala and English, ensuring smooth flow for any audience.",
+            Services     = [
+                "Professional DJ Set (6 hours):Rs. 55,000",
+                "Live Band Performance (4 hours):Rs. 90,000",
+                "Full PA & Lighting Rig:Rs. 40,000",
+                "String Quartet (2 hours):Rs. 35,000",
+                "Bilingual MC Services:Rs. 20,000",
+                "Karaoke System Setup:Rs. 15,000",
+                "Corporate Entertainment Package:Rs. 120,000",
+            ],
+            Pricing      = "Rs. 15,000 – 150,000",
+            PriceMin     = 15000,
+            PriceMax     = 150000,
+            Experience   = "11 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800",
+                "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800",
+                "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800",
+                "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800",
+                "https://images.unsplash.com/photo-1501612780327-45045538702b?w=800",
+                "https://picsum.photos/seed/soundwave01/800/600",
+                "https://picsum.photos/seed/soundwave02/800/600",
+                "https://picsum.photos/seed/soundwave03/800/600",
+                "https://picsum.photos/seed/soundwave04/800/600",
+                "https://picsum.photos/seed/soundwave05/800/600",
+                "https://picsum.photos/seed/soundwave06/800/600",
+                "https://picsum.photos/seed/soundwave07/800/600",
+                "https://picsum.photos/seed/soundwave08/800/600",
+                "https://picsum.photos/seed/soundwave09/800/600",
+                "https://picsum.photos/seed/soundwave10/800/600",
+                "https://picsum.photos/seed/soundwave11/800/600",
+                "https://picsum.photos/seed/soundwave12/800/600",
+                "https://picsum.photos/seed/soundwave13/800/600",
+                "https://picsum.photos/seed/soundwave14/800/600",
+                "https://picsum.photos/seed/soundwave15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-30),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor12 = await UpsertUserAsync(users, new User
+        {
+            Email        = "dazzlebeauty@example.com",
+            FullName     = "Thisari Ratnayake",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94710000003",
+            BusinessName = "Dazzle Beauty Studio",
+            Category     = "beauty",
+            Location     = "Colombo",
+            Description  = "Dazzle Beauty Studio is a leading bridal and editorial makeup studio based in Colombo 5. Our principal artist, Thisari Ratnayake, holds advanced certifications from the London School of Beauty and has assisted at fashion weeks in Dubai and Mumbai. The studio team of six artists collectively brings over 40 years of experience across bridal, film, fashion, and theatrical makeup.\n\nOur studio uses only premium cruelty-free and hypoallergenic products — MAC, Charlotte Tilbury, Armani Beauty, and Huda Beauty — ensuring flawless finish under all lighting conditions including harsh outdoor sun and low-light evening receptions. We offer on-location services across the island, travelling to Kandy, Galle, and Jaffna for destination weddings. Our bridal packages include a trial session, day-of application, touch-up kit, and a consultation call two weeks before the event.\n\nDazzle Beauty Studio has styled brides for weddings featured in Wedding Bells magazine, handled makeup for six commercial shoots in 2025, and completed hair and makeup for the Miss Sri Lanka Western Province pageant. Thisari personally mentors junior makeup artists through a biannual workshop programme.",
+            Services     = [
+                "Full Bridal Package (trial + day):Rs. 35,000",
+                "Bridesmaid Group Package (4 persons):Rs. 28,000",
+                "Groom Grooming & Styling:Rs. 8,000",
+                "On-Location Hair Styling:Rs. 12,000",
+                "Pre-Wedding Shoot Makeup:Rs. 15,000",
+                "Saree Draping & Styling:Rs. 6,000",
+                "Hair Extensions & Updos:Rs. 10,000",
+            ],
+            Pricing      = "Rs. 6,000 – 75,000",
+            PriceMin     = 6000,
+            PriceMax     = 75000,
+            Experience   = "10 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800",
+                "https://images.unsplash.com/photo-1560066984-138daaa7e20c?w=800",
+                "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800",
+                "https://images.unsplash.com/photo-1457972729786-0411a3b2b626?w=800",
+                "https://images.unsplash.com/photo-1522337660329-de0be7983e1b?w=800",
+                "https://picsum.photos/seed/dazzle01/800/600",
+                "https://picsum.photos/seed/dazzle02/800/600",
+                "https://picsum.photos/seed/dazzle03/800/600",
+                "https://picsum.photos/seed/dazzle04/800/600",
+                "https://picsum.photos/seed/dazzle05/800/600",
+                "https://picsum.photos/seed/dazzle06/800/600",
+                "https://picsum.photos/seed/dazzle07/800/600",
+                "https://picsum.photos/seed/dazzle08/800/600",
+                "https://picsum.photos/seed/dazzle09/800/600",
+                "https://picsum.photos/seed/dazzle10/800/600",
+                "https://picsum.photos/seed/dazzle11/800/600",
+                "https://picsum.photos/seed/dazzle12/800/600",
+                "https://picsum.photos/seed/dazzle13/800/600",
+                "https://picsum.photos/seed/dazzle14/800/600",
+                "https://picsum.photos/seed/dazzle15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-28),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor13 = await UpsertUserAsync(users, new User
+        {
+            Email        = "crystallens@example.com",
+            FullName     = "Malshan Peris",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94710000004",
+            BusinessName = "Crystal Lens Photography",
+            Category     = "photography",
+            Location     = "Galle",
+            Description  = "Crystal Lens Photography operates from a converted Dutch colonial building in Galle Fort, offering a one-of-a-kind backdrop for studio sessions while covering events across the Southern Province and beyond. Founder Malshan Peris is an award-winning photojournalist who transitioned to wedding and lifestyle photography in 2018, bringing a powerful storytelling instinct to every shoot.\n\nOur aesthetic leans toward editorial and cinematic — moody, rich-toned images that feel like stills from a film. We use a combination of Nikon Z-series mirrorless cameras and Leica medium-format for portrait work, along with off-camera flash systems that create dramatic yet flattering light in any environment. All images are colour-graded using our signature LUT presets before delivery.\n\nCrystal Lens offers South Sri Lanka's only underwater couples shoot service, conducted in collaboration with a certified dive instructor at Hikkaduwa reef. Our aerial photography coverage using a licensed drone operator completes our full creative offering. We accept a maximum of 20 wedding bookings per year to ensure undivided attention to every couple.",
+            Services     = [
+                "Full Wedding Documentary Package:Rs. 95,000",
+                "Cinematic Wedding Film (10 min):Rs. 75,000",
+                "Underwater Couples Shoot:Rs. 40,000",
+                "Drone Aerial Coverage:Rs. 30,000",
+                "Destination Pre-Wedding Shoot:Rs. 55,000",
+                "Corporate Brand Photography:Rs. 45,000",
+                "Premium Photobook (30 pages):Rs. 22,000",
+            ],
+            Pricing      = "Rs. 22,000 – 180,000",
+            PriceMin     = 22000,
+            PriceMax     = 180000,
+            Experience   = "6 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1520854221256-17e9b4bcf4a4?w=800",
+                "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?w=800",
+                "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800",
+                "https://images.unsplash.com/photo-1531316282196-3f4ae16e34d3?w=800",
+                "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800",
+                "https://picsum.photos/seed/crystal01/800/600",
+                "https://picsum.photos/seed/crystal02/800/600",
+                "https://picsum.photos/seed/crystal03/800/600",
+                "https://picsum.photos/seed/crystal04/800/600",
+                "https://picsum.photos/seed/crystal05/800/600",
+                "https://picsum.photos/seed/crystal06/800/600",
+                "https://picsum.photos/seed/crystal07/800/600",
+                "https://picsum.photos/seed/crystal08/800/600",
+                "https://picsum.photos/seed/crystal09/800/600",
+                "https://picsum.photos/seed/crystal10/800/600",
+                "https://picsum.photos/seed/crystal11/800/600",
+                "https://picsum.photos/seed/crystal12/800/600",
+                "https://picsum.photos/seed/crystal13/800/600",
+                "https://picsum.photos/seed/crystal14/800/600",
+                "https://picsum.photos/seed/crystal15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-22),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor14 = await UpsertUserAsync(users, new User
+        {
+            Email        = "goldenspoon@example.com",
+            FullName     = "Chamila Samaranayake",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94710000005",
+            BusinessName = "Golden Spoon Catering",
+            Category     = "catering",
+            Location     = "Colombo",
+            Description  = "Golden Spoon Catering has been feeding Sri Lanka's most celebrated events since 2013. Our executive team of eight chefs combines classical French training with deep knowledge of Sri Lankan, Indian, and Middle Eastern cuisines — a combination that consistently wins over guests expecting the ordinary. We believe every dish served at an event is a reflection of the host's taste, and we take that responsibility seriously.\n\nWe operate from a commercial kitchen in Colombo 10 that is certified by the Colombo Municipal Council and audited by an independent food safety consultant twice yearly. Our cold-chain logistics team ensures that every item — from delicate seafood to dairy-based desserts — arrives at your venue at the correct temperature. We can serve hot, freshly cooked meals for up to 3,000 guests simultaneously thanks to our fleet of six catering vehicles equipped with commercial-grade hot holding units.\n\nSpecialities include our signature Ceylon curry buffet (14 curries + 6 sambols), our live pasta and wok station, our artisan dessert table service, and our award-winning wedding cake designs. Golden Spoon was named Best Catering Company in Colombo at the 2024 Lanka Events Awards.",
+            Services     = [
+                "Ceylon Curry Buffet (per head):Rs. 1,800",
+                "Continental & Asian Fusion Buffet (per head):Rs. 2,500",
+                "Live Pasta & Wok Station:Rs. 55,000",
+                "Artisan Dessert Table:Rs. 40,000",
+                "Custom Wedding Cake:Rs. 25,000",
+                "Corporate Luncheon Package:Rs. 1,200 per head",
+                "Full Event Service Crew (per 50 guests):Rs. 18,000",
+            ],
+            Pricing      = "Rs. 1,200 – 5,000 per head",
+            PriceMin     = 1200,
+            PriceMax     = 5000,
+            Experience   = "11 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800",
+                "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
+                "https://images.unsplash.com/photo-1555244162-803834f70033?w=800",
+                "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
+                "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800",
+                "https://picsum.photos/seed/golden01/800/600",
+                "https://picsum.photos/seed/golden02/800/600",
+                "https://picsum.photos/seed/golden03/800/600",
+                "https://picsum.photos/seed/golden04/800/600",
+                "https://picsum.photos/seed/golden05/800/600",
+                "https://picsum.photos/seed/golden06/800/600",
+                "https://picsum.photos/seed/golden07/800/600",
+                "https://picsum.photos/seed/golden08/800/600",
+                "https://picsum.photos/seed/golden09/800/600",
+                "https://picsum.photos/seed/golden10/800/600",
+                "https://picsum.photos/seed/golden11/800/600",
+                "https://picsum.photos/seed/golden12/800/600",
+                "https://picsum.photos/seed/golden13/800/600",
+                "https://picsum.photos/seed/golden14/800/600",
+                "https://picsum.photos/seed/golden15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-18),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor15 = await UpsertUserAsync(users, new User
+        {
+            Email        = "petalbloom@example.com",
+            FullName     = "Ishara Dasanayake",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94710000006",
+            BusinessName = "Petal & Bloom Decor",
+            Category     = "decoration",
+            Location     = "Colombo",
+            Description  = "Petal & Bloom Decor is a full-service event design company based in Colombo, known for creating breathtakingly lush floral and botanical environments. Our creative director, Ishara Dasanayake, trained under a master florist in the Netherlands before returning to Sri Lanka in 2019. In five years, the studio has established itself as one of Colombo's most trusted names in high-end event styling.\n\nWe grow a significant portion of our flowers in our own 1.5-acre greenhouse in Horana, giving us year-round access to specialty blooms including peonies, garden roses, lisianthus, and proteas that most local suppliers cannot provide. We supplement with ethically sourced imports from Holland and Ecuador to fulfil our full creative vision. Our décor installations are designed to a centimetre-level precision, with a dedicated team of eight stylists who arrive six hours before each event.\n\nPetal & Bloom's portfolio spans intimate backyard garden parties, 600-guest luxury ballroom weddings, product launches for international beauty brands, and pop-up floral art installations. We were the exclusive décor partner for the 2024 Colombo Luxury Wedding Expo and have been featured in Vogue India's Sri Lanka Special Edition.",
+            Services     = [
+                "Full Ballroom Floral Design:Rs. 180,000",
+                "Bridal Arch & Aisle Styling:Rs. 55,000",
+                "Table Centrepiece Collection (per table):Rs. 4,500",
+                "Flower Wall & Photo Backdrop:Rs. 35,000",
+                "Ceremony Stage Florals:Rs. 65,000",
+                "Welcome Entrance Display:Rs. 22,000",
+                "Boutonniere & Bridesmaid Bouquets:Rs. 15,000",
+            ],
+            Pricing      = "Rs. 15,000 – 250,000",
+            PriceMin     = 15000,
+            PriceMax     = 250000,
+            Experience   = "5 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1553531087-b25d5dc7e614?w=800",
+                "https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=800",
+                "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800",
+                "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800",
+                "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800",
+                "https://picsum.photos/seed/petal01/800/600",
+                "https://picsum.photos/seed/petal02/800/600",
+                "https://picsum.photos/seed/petal03/800/600",
+                "https://picsum.photos/seed/petal04/800/600",
+                "https://picsum.photos/seed/petal05/800/600",
+                "https://picsum.photos/seed/petal06/800/600",
+                "https://picsum.photos/seed/petal07/800/600",
+                "https://picsum.photos/seed/petal08/800/600",
+                "https://picsum.photos/seed/petal09/800/600",
+                "https://picsum.photos/seed/petal10/800/600",
+                "https://picsum.photos/seed/petal11/800/600",
+                "https://picsum.photos/seed/petal12/800/600",
+                "https://picsum.photos/seed/petal13/800/600",
+                "https://picsum.photos/seed/petal14/800/600",
+                "https://picsum.photos/seed/petal15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-12),
+            Availability = AvailabilityFor(30),
+        }, ct);
+
+        var vendor16 = await UpsertUserAsync(users, new User
+        {
+            Email        = "skyviewhall@example.com",
+            FullName     = "Dinuka Fonseka",
+            Role         = UserRole.Vendor,
+            PasswordHash = _hasher.Hash(pwd),
+            Phone        = "+94710000007",
+            BusinessName = "Skyview Hall",
+            Category     = "venues",
+            Location     = "Colombo",
+            Description  = "Skyview Hall occupies the 32nd and 33rd floors of a landmark tower in Colombo's business district, offering the city's most dramatic skyline backdrop for any celebration. Our 800-seat Grand Ballroom and 200-seat Sky Lounge together create a versatile event campus that has hosted everything from state dinners to intimate cocktail launches. Every window offers panoramic views of the Indian Ocean, Beira Lake, and the illuminated Colombo skyline after dark.\n\nThe venue's interior was designed by an award-winning Sri Lankan architect and features floor-to-ceiling glass walls, a polished black granite dance floor, integrated 4K projection screens across four walls, and a Dolby Atmos sound system. Our full-time in-house events team of 15 professionals handle everything from floral arrangements to valet parking, making us the preferred choice for hosts who want seamless execution with zero stress.\n\nSkyview Hall is fully accessible, offers dedicated bridal suites with en-suite bathrooms, private elevator access, and a complimentary one-hour pre-event consultation with our senior event manager. We have hosted over 300 weddings, 150 corporate galas, and three charity events for international NGOs. Our Sky Lounge is available for intimate events of 20 guests upward.",
+            Services     = [
+                "Grand Ballroom (full day, up to 800 guests):Rs. 450,000",
+                "Sky Lounge (half day, up to 200 guests):Rs. 120,000",
+                "Complete Wedding Package:Rs. 650,000",
+                "Corporate Gala Package:Rs. 380,000",
+                "Dolby Atmos AV Setup:Rs. 65,000",
+                "Bridal Suite (full day):Rs. 25,000",
+                "Extended Evening (to midnight):Rs. 50,000",
+            ],
+            Pricing      = "Rs. 120,000 – 700,000",
+            PriceMin     = 120000,
+            PriceMax     = 700000,
+            Experience   = "7 years",
+            Photos       = [
+                "https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?w=800",
+                "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800",
+                "https://images.unsplash.com/photo-1549451371-64aa98a6f660?w=800",
+                "https://images.unsplash.com/photo-1561912774-79769a0a0a7a?w=800",
+                "https://images.unsplash.com/photo-1561329598-02ad5571cb74?w=800",
+                "https://picsum.photos/seed/skyview01/800/600",
+                "https://picsum.photos/seed/skyview02/800/600",
+                "https://picsum.photos/seed/skyview03/800/600",
+                "https://picsum.photos/seed/skyview04/800/600",
+                "https://picsum.photos/seed/skyview05/800/600",
+                "https://picsum.photos/seed/skyview06/800/600",
+                "https://picsum.photos/seed/skyview07/800/600",
+                "https://picsum.photos/seed/skyview08/800/600",
+                "https://picsum.photos/seed/skyview09/800/600",
+                "https://picsum.photos/seed/skyview10/800/600",
+                "https://picsum.photos/seed/skyview11/800/600",
+                "https://picsum.photos/seed/skyview12/800/600",
+                "https://picsum.photos/seed/skyview13/800/600",
+                "https://picsum.photos/seed/skyview14/800/600",
+                "https://picsum.photos/seed/skyview15/800/600",
+            ],
+            Approved     = true,
+            ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-8),
             Availability = AvailabilityFor(30),
         }, ct);
 
@@ -563,6 +1078,203 @@ public sealed class MongoSeedHostedService : IHostedService
             CreatedAt    = DateTimeOffset.UtcNow.AddDays(-18),
         }, ct);
 
+        // ── More completed bookings (creating cross-vendor review relationships) ─
+
+        // Priya reviews Royal Bites — a wedding she had 45 days ago
+        var bX1 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer3.Id, CustomerName = customer3.FullName,
+            VendorId = vendor4.Id, VendorName = vendor4.FullName, VendorBusinessName = vendor4.BusinessName!,
+            Service = "Buffet Catering", EventDate = Ago(45), EventType = "Wedding",
+            GuestCount = 250, Budget = "Rs. 625,000",
+            SpecialRequests = "Traditional Sri Lankan menu preferred.",
+            Status = BookingStatus.Completed, VendorResponseNote = "Absolutely, we have a wonderful traditional menu ready.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-60), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-45),
+        }, ct);
+
+        // Michael reviews Glam & Grace — used for his sister's wedding
+        var bX2 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer4.Id, CustomerName = customer4.FullName,
+            VendorId = vendor5.Id, VendorName = vendor5.FullName, VendorBusinessName = vendor5.BusinessName!,
+            Service = "Bridal Makeup", EventDate = Ago(38), EventType = "Wedding",
+            GuestCount = 1, Budget = "Rs. 35,000",
+            SpecialRequests = "Traditional Kandyan bridal look requested.",
+            Status = BookingStatus.Completed, VendorResponseNote = "We specialise in Kandyan looks!",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-55), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-38),
+        }, ct);
+
+        // Sarah reviews Grand Vista — used for her company event
+        var bX3 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer1.Id, CustomerName = customer1.FullName,
+            VendorId = vendor6.Id, VendorName = vendor6.FullName, VendorBusinessName = vendor6.BusinessName!,
+            Service = "Banquet Hall", EventDate = Ago(55), EventType = "Corporate Gala",
+            GuestCount = 280, Budget = "Rs. 280,000",
+            SpecialRequests = "Projector setup and stage required.",
+            Status = BookingStatus.Completed, VendorResponseNote = "Full AV setup will be ready for you.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-70), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-55),
+        }, ct);
+
+        // James reviews Bloom Decor — used for his parents' anniversary
+        var bX4 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer2.Id, CustomerName = customer2.FullName,
+            VendorId = vendor3.Id, VendorName = vendor3.FullName, VendorBusinessName = vendor3.BusinessName!,
+            Service = "Stage Decoration", EventDate = Ago(50), EventType = "Anniversary",
+            GuestCount = 80, Budget = "Rs. 40,000",
+            SpecialRequests = "Gold and white colour theme.",
+            Status = BookingStatus.Completed, VendorResponseNote = "Beautiful choice, we'll create something timeless.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-65), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-50),
+        }, ct);
+
+        // customer1 reviews vendor7 (Niluka Photography)
+        var bX5 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer1.Id, CustomerName = customer1.FullName,
+            VendorId = vendor7.Id, VendorName = vendor7.FullName, VendorBusinessName = vendor7.BusinessName!,
+            Service = "Engagement Shoot", EventDate = Ago(25), EventType = "Engagement",
+            GuestCount = 2, Budget = "Rs. 18,000", Status = BookingStatus.Completed,
+            VendorResponseNote = "Looking forward to capturing your special day!",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-40), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-25),
+        }, ct);
+
+        // customer2 reviews vendor8 (Spice Route Catering)
+        var bX6 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer2.Id, CustomerName = customer2.FullName,
+            VendorId = vendor8.Id, VendorName = vendor8.FullName, VendorBusinessName = vendor8.BusinessName!,
+            Service = "Traditional Sri Lankan Buffet (per head)", EventDate = Ago(33), EventType = "Baby Shower",
+            GuestCount = 120, Budget = "Rs. 180,000", Status = BookingStatus.Completed,
+            VendorResponseNote = "Great choice! We'll bring our full team.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-48), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-33),
+        }, ct);
+
+        // customer3 reviews vendor9 (Enchanted Decor)
+        var bX7 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer3.Id, CustomerName = customer3.FullName,
+            VendorId = vendor9.Id, VendorName = vendor9.FullName, VendorBusinessName = vendor9.BusinessName!,
+            Service = "Full Venue Transformation", EventDate = Ago(42), EventType = "Wedding",
+            GuestCount = 180, Budget = "Rs. 120,000", Status = BookingStatus.Completed,
+            VendorResponseNote = "We will create something truly enchanting.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-57), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-42),
+        }, ct);
+
+        // customer4 reviews vendor11 (Sound Wave Entertainment)
+        var bX8 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer4.Id, CustomerName = customer4.FullName,
+            VendorId = vendor11.Id, VendorName = vendor11.FullName, VendorBusinessName = vendor11.BusinessName!,
+            Service = "Live Band Performance (4 hours)", EventDate = Ago(28), EventType = "Corporate Event",
+            GuestCount = 200, Budget = "Rs. 90,000", Status = BookingStatus.Completed,
+            VendorResponseNote = "Our band has the perfect setlist for corporate events.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-43), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-28),
+        }, ct);
+
+        // customer1 reviews vendor14 (Golden Spoon)
+        var bX9 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer1.Id, CustomerName = customer1.FullName,
+            VendorId = vendor14.Id, VendorName = vendor14.FullName, VendorBusinessName = vendor14.BusinessName!,
+            Service = "Ceylon Curry Buffet (per head)", EventDate = Ago(20), EventType = "Birthday Party",
+            GuestCount = 90, Budget = "Rs. 162,000", Status = BookingStatus.Completed,
+            VendorResponseNote = "Our curry buffet will be the highlight of the party!",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-35), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-20),
+        }, ct);
+
+        // customer2 reviews vendor15 (Petal & Bloom)
+        var bX10 = await UpsertBookingAsync(bookings, new Booking
+        {
+            Id = NewId(), CustomerId = customer2.Id, CustomerName = customer2.FullName,
+            VendorId = vendor15.Id, VendorName = vendor15.FullName, VendorBusinessName = vendor15.BusinessName!,
+            Service = "Full Ballroom Floral Design", EventDate = Ago(15), EventType = "Wedding",
+            GuestCount = 320, Budget = "Rs. 180,000", Status = BookingStatus.Completed,
+            VendorResponseNote = "We'll create a floral dreamscape for your guests.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-30), UpdatedAt = DateTimeOffset.UtcNow.AddDays(-15),
+        }, ct);
+
+        // ── Reviews for all completed bookings ────────────────────────────────
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX1.Id, CustomerId = customer3.Id, CustomerName = customer3.FullName,
+            VendorId = vendor4.Id, Rating = 5,
+            Comment = "Royal Bites absolutely delivered! The spread was enormous — 14 types of curries and the most flavourful pol sambol I've ever tasted at a wedding. 250 guests and not a single complaint about the food. The service team was professional and kept the stations spotless throughout. Highly recommend for anyone wanting authentic Sri Lankan food at scale.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-43),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX2.Id, CustomerId = customer4.Id, CustomerName = customer4.FullName,
+            VendorId = vendor5.Id, Rating = 5,
+            Comment = "Kavindya is an absolute artist. She completely understood the traditional Kandyan look we wanted and executed it flawlessly. My sister looked breathtaking and the makeup stayed perfect through the entire 10-hour celebration. The bride's trial session two weeks before was thorough and reassuring. The team arrived on time and were so professional.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-36),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX3.Id, CustomerId = customer1.Id, CustomerName = customer1.FullName,
+            VendorId = vendor6.Id, Rating = 5,
+            Comment = "Grand Vista exceeded every expectation for our company gala. The city views at night were jaw-dropping and our 280 guests were completely wowed. The AV setup was flawless — crystal clear audio and the projection screens enhanced every presentation. The in-house team coordinated everything seamlessly so we could just enjoy the evening. Would absolutely book again.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-53),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX4.Id, CustomerId = customer2.Id, CustomerName = customer2.FullName,
+            VendorId = vendor3.Id, Rating = 4,
+            Comment = "Bloom Decor transformed the hall beautifully for my parents' 30th anniversary. The gold and white theme was executed with real elegance. Only minor issue was one of the centrepieces arriving slightly late, but Nimali's team sorted it within 20 minutes and the end result was stunning. Very reasonable pricing for the quality.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-48),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX5.Id, CustomerId = customer1.Id, CustomerName = customer1.FullName,
+            VendorId = vendor7.Id, Rating = 5,
+            Comment = "Niluka Photography captured our engagement shoot in Kandy and the results were beyond anything we imagined. Niluka has an incredible eye for light and composition. The Kandy Lake backdrop shots are simply gorgeous — we've already had family asking for copies. The turnaround was fast too, with a full edited gallery in less than a week. 10/10!",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-23),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX6.Id, CustomerId = customer2.Id, CustomerName = customer2.FullName,
+            VendorId = vendor8.Id, Rating = 5,
+            Comment = "Spice Route Catering made our baby shower a feast to remember. The seafood BBQ was outstanding and the live cooking station was a hit with every guest. The team from Negombo were punctual, cheerful, and meticulous about hygiene. The food was freshly prepared and the quality was restaurant-grade. Our guests are still asking for the catering contact!",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-31),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX7.Id, CustomerId = customer3.Id, CustomerName = customer3.FullName,
+            VendorId = vendor9.Id, Rating = 5,
+            Comment = "Enchanted Decor turned our wedding venue in Galle into something out of a fairy tale. The floral archway, the cascading fabric ceiling, and the illuminated table centrepieces were breathtaking. Sanduni's team worked with such precision and passion. Every guest complimented the decor and several asked for the vendor's contact on the day. Worth every rupee.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-40),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX8.Id, CustomerId = customer4.Id, CustomerName = customer4.FullName,
+            VendorId = vendor11.Id, Rating = 4,
+            Comment = "Sound Wave Entertainment delivered a fantastic performance at our corporate event in Gampaha. Hasitha and his band read the room perfectly, starting with smooth jazz during dinner and gradually building up to lively crowd-pleasers. The PA system was top quality — great sound even in the far corners of the hall. Would have given 5 stars if the setup hadn't started 30 minutes late.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-26),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX9.Id, CustomerId = customer1.Id, CustomerName = customer1.FullName,
+            VendorId = vendor14.Id, Rating = 5,
+            Comment = "Golden Spoon Catering made my mother's birthday party an absolute culinary celebration. The Ceylon curry buffet was simply outstanding — the curries were rich, fresh, and full of flavour. The presentation was beautiful and the service staff were polite and attentive. Several guests said it was the best food they'd eaten at any party. Will definitely use Golden Spoon for every future event.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-18),
+        }, ct);
+
+        await UpsertReviewAsync(reviews, new Review
+        {
+            Id = NewId(), BookingId = bX10.Id, CustomerId = customer2.Id, CustomerName = customer2.FullName,
+            VendorId = vendor15.Id, Rating = 5,
+            Comment = "Petal & Bloom turned our wedding reception into a garden paradise. The flower arrangements were lush, fragrant, and absolutely stunning in photos. Ishara personally oversaw the setup and her team's attention to detail was extraordinary. The bridal arch alone was worth the entire cost — our wedding photos look like magazine shoots. I cannot recommend them enough.",
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-13),
+        }, ct);
+
         // ── Notifications ──────────────────────────────────────────────────────
         await UpsertNotificationsAsync(notifications, [
             // Vendor1 (Chamara) — new booking request from Priya (b7, rejected later)
@@ -617,7 +1329,7 @@ public sealed class MongoSeedHostedService : IHostedService
         ], ct);
 
         _logger.LogInformation(
-            "Seed complete — 1 admin, 4 customers, 6 vendors, 2 pending vendors, 8 bookings, 3 conversations, 2 reviews, 10 notifications.");
+            "Seed complete — 1 admin, 4 customers, 16 vendors (14 approved + 2 pending), 18 bookings, 12 reviews, 3 conversations, 10 notifications.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

@@ -228,7 +228,37 @@ authGroup.MapPost("/login", async (
 // --- SignalR hub
 app.MapHub<ChatHub>("/hubs/chat");
 
+// --- Public platform statistics (used by About page)
+app.MapGet("/api/stats", async (
+    Eventora.Application.Abstractions.Persistence.IUserRepository users,
+    Eventora.Application.Abstractions.Persistence.IBookingRepository bookings,
+    Eventora.Application.Abstractions.Persistence.IReviewRepository reviews,
+    CancellationToken ct) =>
+{
+    var allUsers    = await users.GetAllAsync(ct);
+    var allBookings = await bookings.GetAllAsync(ct);
+    var allReviews  = await reviews.GetRecentAsync(1000, ct);
+
+    var customerCount       = allUsers.Count(u => u.Role == Eventora.Domain.Users.UserRole.Customer);
+    var approvedVendorCount = allUsers.Count(u => u.Role == Eventora.Domain.Users.UserRole.Vendor && u.Approved);
+    var completedBookings   = allBookings.Count(b => b.Status == Eventora.Domain.Bookings.BookingStatus.Completed);
+    var totalBookings       = allBookings.Count;
+    var reviewCount         = allReviews.Count;
+    var avgRating           = reviewCount == 0 ? 0.0 : Math.Round(allReviews.Average(r => (double)r.Rating), 1);
+
+    return Results.Ok(new
+    {
+        customers        = customerCount,
+        approvedVendors  = approvedVendorCount,
+        totalBookings    = totalBookings,
+        completedBookings= completedBookings,
+        reviews          = reviewCount,
+        averageRating    = avgRating,
+    });
+}).WithTags("Public");
+
 // --- Feature endpoints
+app.MapUploadEndpoints();
 app.MapUserEndpoints();
 app.MapVendorEndpoints();
 app.MapBookingEndpoints();

@@ -34,6 +34,7 @@ export default function VendorBrowsePage() {
   const [vendors, setVendors] = useState<User[]>([])
   const [reviewSummary, setReviewSummary] = useState<Record<string, { avg: number; count: number }>>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [locationQuery, setLocationQuery] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const PRICE_BOUNDS: Record<string, { min?: number; max?: number }> = {
@@ -59,6 +60,7 @@ export default function VendorBrowsePage() {
       const approvedVendors = await getVendors({
         search: searchTerm || undefined,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        location: locationQuery.trim() || undefined,
         minPrice: bounds.min,
         maxPrice: bounds.max,
       })
@@ -75,7 +77,7 @@ export default function VendorBrowsePage() {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, priceRange, selectedCategory, searchQuery])
+  }, [searchParams, priceRange, selectedCategory, searchQuery, locationQuery])
 
   useEffect(() => {
     if (vendors.length === 0) {
@@ -149,28 +151,36 @@ export default function VendorBrowsePage() {
 
               {/* Filters */}
               {showFilters && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Category
-                    </label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Category</label>
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground text-sm"
                     >
                       {categories.map((cat) => (
-                        <option key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </option>
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Price Range
-                    </label>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Location</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        type="text"
+                        placeholder="City or area…"
+                        value={locationQuery}
+                        onChange={(e) => setLocationQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Price Range</label>
                     <select
                       value={priceRange}
                       onChange={(e) => setPriceRange(e.target.value)}
@@ -183,16 +193,14 @@ export default function VendorBrowsePage() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Rating
-                    </label>
-                    <select className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground text-sm">
-                      <option value="">All Ratings</option>
-                      <option value="4.5">4.5+ Stars</option>
-                      <option value="4.0">4.0+ Stars</option>
-                      <option value="3.5">3.5+ Stars</option>
-                    </select>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedCategory('all'); setLocationQuery(''); setPriceRange('all'); setSearchQuery('') }}
+                      className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground text-sm hover:bg-muted transition"
+                    >
+                      Clear Filters
+                    </button>
                   </div>
                 </div>
               )}
