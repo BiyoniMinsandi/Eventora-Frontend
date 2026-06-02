@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { getVendorsForApproval, approveVendor, rejectVendor, type User } from '@/lib/auth'
+import { type User } from '@/lib/auth'
+import { getPendingVendors, getVendors, approveVendor, rejectVendor } from '@/lib/data'
 import { CheckCircle, XCircle, Clock, Mail, Phone, MapPin, Calendar, ArrowLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ProtectedRoute } from '@/components/protected-route'
@@ -49,24 +50,23 @@ export default function AdminApprovalsPage() {
     loadVendors()
   }, [])
 
-  const loadVendors = () => {
-    const data = getVendorsForApproval()
-    setVendors(data)
+  const loadVendors = async () => {
+    const [pending, approved] = await Promise.all([getPendingVendors(), getVendors()])
+    setVendors({ pending, approved, rejected: [] })
   }
 
-  const handleApprove = (vendorId: string) => {
-    const result = approveVendor(vendorId)
-    
-    if (result.success) {
+  const handleApprove = async (vendorId: string) => {
+    try {
+      await approveVendor(vendorId)
       toast({
         title: 'Vendor Approved',
         description: 'The vendor has been approved and can now login',
       })
-      loadVendors()
-    } else {
+      await loadVendors()
+    } catch (e: any) {
       toast({
         title: 'Error',
-        description: result.message,
+        description: e?.message || 'Failed to approve vendor',
         variant: 'destructive',
       })
     }
@@ -77,24 +77,23 @@ export default function AdminApprovalsPage() {
     setRejectDialogOpen(true)
   }
 
-  const handleRejectConfirm = () => {
+  const handleRejectConfirm = async () => {
     if (!selectedVendor || !rejectionReason.trim()) return
 
-    const result = rejectVendor(selectedVendor.id, rejectionReason)
-    
-    if (result.success) {
+    try {
+      await rejectVendor(selectedVendor.id, rejectionReason)
       toast({
         title: 'Vendor Rejected',
         description: 'The vendor application has been rejected',
       })
-      loadVendors()
+      await loadVendors()
       setRejectDialogOpen(false)
       setRejectionReason('')
       setSelectedVendor(null)
-    } else {
+    } catch (e: any) {
       toast({
         title: 'Error',
-        description: result.message,
+        description: e?.message || 'Failed to reject vendor',
         variant: 'destructive',
       })
     }
@@ -202,7 +201,6 @@ export default function AdminApprovalsPage() {
     )
   }
 
-  const dummyVendors = []
 
   return (
     <ProtectedRoute allowedRoles={['admin']}>

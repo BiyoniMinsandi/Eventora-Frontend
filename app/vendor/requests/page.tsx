@@ -16,7 +16,7 @@ import { Calendar, CheckCircle2, X, FileCheck, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { getUserBookings, updateBookingStatus, type Booking, getOrCreateConversation, createNotification } from '@/lib/data'
+import { getUserBookings, updateBookingStatus, type Booking, getOrCreateConversation } from '@/lib/data'
 import { logoutUser } from '@/lib/auth'
 import {
   Dialog,
@@ -40,10 +40,19 @@ export default function VendorRequestsPage() {
   const [showDialog, setShowDialog] = useState(false)
 
   useEffect(() => {
-    if (user) {
-      const vendorBookings = getUserBookings(user.id, 'vendor')
-      const pendingRequests = vendorBookings.filter(b => b.status === 'pending')
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const vendorBookings = await getUserBookings(user.id, 'vendor')
+      if (cancelled) return
+      const pendingRequests = vendorBookings.filter((b) => b.status === 'pending')
       setRequests(pendingRequests)
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user])
 
@@ -81,10 +90,10 @@ export default function VendorRequestsPage() {
     setIsSubmitting(true)
 
     const newStatus = action === 'accept' ? 'accepted' : 'rejected'
-    updateBookingStatus(selectedRequest.id, newStatus, responseNote)
+    await updateBookingStatus(selectedRequest.id, newStatus, responseNote)
 
     if (action === 'accept') {
-      getOrCreateConversation(
+      await getOrCreateConversation(
         selectedRequest.customerId,
         selectedRequest.customerName || 'Customer',
         user!.id,
@@ -92,29 +101,11 @@ export default function VendorRequestsPage() {
       )
     }
 
-    // Create notification for customer
-    const notificationTitle = action === 'accept' 
-      ? `Your booking has been accepted!`
-      : `Your booking has been rejected`
-    
-    const notificationMessage = action === 'accept'
-      ? `${user?.businessName || 'The vendor'} has accepted your ${selectedRequest.eventType} booking for ${new Date(selectedRequest.eventDate).toLocaleDateString()}`
-      : `Unfortunately, your ${selectedRequest.eventType} booking for ${new Date(selectedRequest.eventDate).toLocaleDateString()} has been rejected. Check the response note for details.`
-
-    createNotification({
-      userId: selectedRequest.customerId,
-      type: action === 'accept' ? 'booking_accepted' : 'booking_rejected',
-      title: notificationTitle,
-      message: notificationMessage,
-      relatedBookingId: selectedRequest.id,
-      read: false,
-    })
-
     setIsSubmitting(false)
     setShowDialog(false)
 
     // Update local state
-    setRequests(requests.filter(r => r.id !== selectedRequest.id))
+    setRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id))
     setSelectedRequest(null)
     setAction(null)
     setResponseNote('')

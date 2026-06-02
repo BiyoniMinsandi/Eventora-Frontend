@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Edit2, Trash2, Eye, EyeOff, Plus, Search, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
+import { getAdminCategories, getAdminFaqs, getAdminPages } from '@/lib/data'
 
 // No hard-coded demo content — load from localStorage when available
 
@@ -29,20 +30,17 @@ export default function AdminContent() {
   const [categories, setCategories] = useState<any[]>([])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    let cancelled = false
+    ;(async () => {
+      const [p, f, c] = await Promise.all([getAdminPages(), getAdminFaqs(), getAdminCategories()])
+      if (cancelled) return
+      setPages(p)
+      setFaqs(f)
+      setCategories(c)
+    })()
 
-    try {
-      const p = localStorage.getItem('eventora_pages')
-      const f = localStorage.getItem('eventora_faqs')
-      const c = localStorage.getItem('eventora_categories')
-
-      setPages(p ? JSON.parse(p) : [])
-      setFaqs(f ? JSON.parse(f) : [])
-      setCategories(c ? JSON.parse(c) : [])
-    } catch (e) {
-      setPages([])
-      setFaqs([])
-      setCategories([])
+    return () => {
+      cancelled = true
     }
   }, [])
 

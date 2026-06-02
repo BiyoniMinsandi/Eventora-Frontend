@@ -23,9 +23,9 @@ import {
 } from 'lucide-react'
 import { ProtectedRoute } from '@/components/protected-route'
 import { useAuth } from '@/components/auth-provider'
-import { getVendorsForApproval, getStoredUsers } from '@/lib/auth'
 import { logoutUser } from '@/lib/auth'
 import { Sidebar } from '@/components/layout/sidebar'
+import { getAdminUsers, getPendingVendors, getVendors, getBookings, getDisputes } from '@/lib/data'
 
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -38,23 +38,42 @@ export default function AdminDashboard() {
   }
   const [vendorStats, setVendorStats] = useState({ pending: 0, approved: 0, rejected: 0 })
   const [allUsers, setAllUsers] = useState({ customers: 0, vendors: 0, admins: 0 })
+  const [bookingCount, setBookingCount] = useState(0)
+  const [activeDisputeCount, setActiveDisputeCount] = useState(0)
 
   useEffect(() => {
-    // Vendor approval counts come from local storage.
-    const vendorData = getVendorsForApproval()
-    setVendorStats({
-      pending: vendorData.pending.length,
-      approved: vendorData.approved.length,
-      rejected: vendorData.rejected.length,
-    })
+    let cancelled = false
 
-    // User counts are derived from stored users.
-    const users = getStoredUsers()
-    setAllUsers({
-      customers: users.filter(u => u.role === 'customer').length,
-      vendors: users.filter(u => u.role === 'vendor').length,
-      admins: users.filter(u => u.role === 'admin').length,
-    })
+    ;(async () => {
+      const [users, pendingVendors, approvedVendors, bookings, disputes] = await Promise.all([
+        getAdminUsers(),
+        getPendingVendors(),
+        getVendors(),
+        getBookings(),
+        getDisputes(),
+      ])
+
+      if (cancelled) return
+
+      setVendorStats({
+        pending: pendingVendors.length,
+        approved: approvedVendors.length,
+        rejected: 0,
+      })
+
+      setAllUsers({
+        customers: users.filter((u) => u.role === 'customer').length,
+        vendors: users.filter((u) => u.role === 'vendor').length,
+        admins: users.filter((u) => u.role === 'admin').length,
+      })
+
+      setBookingCount(bookings.length)
+      setActiveDisputeCount(disputes.filter((d) => d.status === 'open' || d.status === 'in-review').length)
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
   
   const stats = [
@@ -82,7 +101,7 @@ export default function AdminDashboard() {
     },
     {
       label: 'Total Bookings',
-      value: '0',
+      value: String(bookingCount),
       icon: ShoppingCart,
       color: 'text-blue-600',
       trend: 'From all customers',
@@ -96,10 +115,10 @@ export default function AdminDashboard() {
     },
     {
       label: 'Active Disputes',
-      value: '0',
+      value: String(activeDisputeCount),
       icon: AlertTriangle,
       color: 'text-red-600',
-      trend: '0 requiring attention',
+      trend: `${activeDisputeCount} requiring attention`,
     },
   ]
 

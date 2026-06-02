@@ -18,8 +18,8 @@ import { Star, MapPin, Search, Filter, ChevronDown } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import Loading from './loading'
-import { getStoredUsers, type User } from '@/lib/auth'
-import { getVendorAverageRating, getVendorReviews } from '@/lib/data'
+import type { User } from '@/lib/auth'
+import { getVendors, getVendorReviews } from '@/lib/data'
 
 export default function VendorBrowsePage() {
   const searchParams = useSearchParams()
@@ -28,6 +28,7 @@ export default function VendorBrowsePage() {
   const [priceRange, setPriceRange] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
   const [vendors, setVendors] = useState<User[]>([])
+  const [reviewSummary, setReviewSummary] = useState<Record<string, { avg: number; count: number }>>({})
 
   // Initialize filters from URL parameters and load approved vendors.
   useEffect(() => {
@@ -41,11 +42,43 @@ export default function VendorBrowsePage() {
       setSearchQuery(searchParam)
     }
 
-    // Load approved vendors from localStorage (local/demo persistence).
-    const allUsers = getStoredUsers()
-    const approvedVendors = allUsers.filter(u => u.role === 'vendor' && u.approved === true)
-    setVendors(approvedVendors)
+    let cancelled = false
+    ;(async () => {
+      const approvedVendors = await getVendors()
+      if (cancelled) return
+      setVendors(approvedVendors)
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [searchParams])
+
+  useEffect(() => {
+    if (vendors.length === 0) {
+      setReviewSummary({})
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      const pairs = await Promise.all(
+        vendors.map(async (vendor) => {
+          const reviews = await getVendorReviews(vendor.id)
+          const count = reviews.length
+          const avg = count === 0 ? 0 : reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / count
+          return [vendor.id, { avg, count }] as const
+        })
+      )
+
+      if (cancelled) return
+      setReviewSummary(Object.fromEntries(pairs))
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [vendors])
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -165,8 +198,8 @@ export default function VendorBrowsePage() {
               {filteredVendors.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredVendors.map((vendor) => {
-                    const averageRating = getVendorAverageRating(vendor.id)
-                    const reviewCount = getVendorReviews(vendor.id).length
+                    const averageRating = reviewSummary[vendor.id]?.avg ?? 0
+                    const reviewCount = reviewSummary[vendor.id]?.count ?? 0
                     const firstPhoto = vendor.photos && vendor.photos.length > 0 ? vendor.photos[0] : null
                     
                     return (

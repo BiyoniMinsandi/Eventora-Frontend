@@ -15,7 +15,8 @@ import {
   Calendar,
   UserCheck,
 } from 'lucide-react'
-import { getStoredUsers, type User } from '@/lib/auth'
+import type { User } from '@/lib/auth'
+import { getAdminUsers } from '@/lib/data'
 
 export default function AdminUsersPage() {
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -25,9 +26,17 @@ export default function AdminUsersPage() {
   const [selectedStatus, setSelectedStatus] = useState('all')
 
   useEffect(() => {
-    const users = getStoredUsers()
-    setAllUsers(users)
-    setFilteredUsers(users)
+    let cancelled = false
+    ;(async () => {
+      const users = await getAdminUsers()
+      if (cancelled) return
+      setAllUsers(users)
+      setFilteredUsers(users)
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {

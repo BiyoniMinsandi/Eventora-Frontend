@@ -16,13 +16,13 @@ import { Calendar } from '@/components/ui/calendar'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/components/auth-provider'
 import { useToast } from '@/hooks/use-toast'
-import { updateUserProfile } from '@/lib/auth'
+import { updateMeApi } from '@/lib/auth'
 import { Calendar as CalendarIcon, Clock, Plus, X, ArrowLeft, CheckCircle2, Trash2 } from 'lucide-react'
 import type { AvailabilitySlot } from '@/lib/auth'
 
 export default function VendorAvailability() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, login } = useAuth()
   const { toast } = useToast()
 
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([])
@@ -118,7 +118,7 @@ export default function VendorAvailability() {
     })
   }
 
-  const handleSaveAvailability = () => {
+  const handleSaveAvailability = async () => {
     if (!user) return
 
     // Validate time slots
@@ -131,11 +131,10 @@ export default function VendorAvailability() {
       return
     }
 
-    const result = updateUserProfile(user.id, {
-      availability,
-    })
+    const result = await updateMeApi({ availability })
 
     if (result.success) {
+      if (result.user) login(result.user)
       toast({
         title: 'Success',
         description: 'Availability updated successfully',

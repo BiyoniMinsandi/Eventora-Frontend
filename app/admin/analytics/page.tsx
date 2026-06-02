@@ -26,7 +26,7 @@ import {
 } from 'recharts'
 import { Download, Filter, Calendar, TrendingUp, ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { getBookings } from '@/lib/data'
+import { getBookings, type Booking } from '@/lib/data'
 
 // Data will be derived from stored bookings (no hard-coded demo data)
 const categoryData: { name: string; value: number }[] = []
@@ -67,15 +67,21 @@ function formatDateShort(d: Date) {
 export default function AdminAnalytics() {
   const router = useRouter()
   const [range, setRange] = useState<RangeKey>('6months')
-  const [bookings, setBookings] = useState<any[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
 
   useEffect(() => {
-    // load bookings from localStorage-backed data
-    try {
-      const b = getBookings() || []
-      setBookings(b)
-    } catch (e) {
-      setBookings([])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const b = await getBookings()
+        if (!cancelled) setBookings(b)
+      } catch {
+        if (!cancelled) setBookings([])
+      }
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [])
 

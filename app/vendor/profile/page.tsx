@@ -15,13 +15,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/components/auth-provider'
-import { updateUserProfile } from '@/lib/auth'
+import { updateMeApi } from '@/lib/auth'
 import { Upload, X, Save, ArrowLeft, ImageIcon } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function VendorProfilePage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, login } = useAuth()
   const { toast } = useToast()
   
   const [formData, setFormData] = useState({
@@ -102,12 +102,13 @@ export default function VendorProfilePage() {
     }))
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!user) return
 
-    const result = updateUserProfile(user.id, formData)
+    const result = await updateMeApi(formData)
 
     if (result.success) {
+      if (result.user) login(result.user)
       toast({
         title: 'Success',
         description: 'Profile updated successfully',

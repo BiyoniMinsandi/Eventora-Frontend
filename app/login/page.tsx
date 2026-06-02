@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
-import { loginUser, getRoleRedirectUrl, initializeDemoAccounts } from '@/lib/auth'
+import { loginUserApi, getRoleRedirectUrl } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -40,13 +40,10 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    // Ensure demo accounts exist (so first-time users can sign in).
-    initializeDemoAccounts()
-
-    const result = loginUser(email, password)
+    const result = await loginUserApi(email, password)
 
     if (result.success && result.user) {
-      login(result.user)
+      login(result.user, result.token)
       const redirectUrl = getRoleRedirectUrl(result.user.role)
       router.push(redirectUrl)
     } else {

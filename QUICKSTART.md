@@ -60,7 +60,7 @@ All security, performance, scalability, reliability, and maintainability improve
 
 ### 1. Install Dependencies
 ```bash
-cd eventora-ui-design
+cd eventora-frontend
 pnpm install
 ```
 
@@ -73,6 +73,28 @@ pnpm dev
 ```
 http://localhost:3000
 ```
+
+---
+
+## Backend API (Optional but recommended)
+
+### 1. Start MongoDB
+
+Mongo must be running at the connection string in:
+- eventora-backend/src/Eventora.Api/appsettings.json
+
+Default is `mongodb://localhost:27017`.
+
+### 2. Run the API
+```bash
+cd eventora-backend
+dotnet run --project src/Eventora.Api
+```
+
+API base URL (per launchSettings):
+`http://localhost:5125`
+
+In Development, the API seeds demo users automatically (see `Seed` in appsettings.Development.json).
 
 ---
 

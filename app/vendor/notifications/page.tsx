@@ -35,9 +35,18 @@ export default function VendorNotificationsPage() {
   const [selectedTab, setSelectedTab] = useState<'all' | 'approval' | 'bookings'>('all')
 
   useEffect(() => {
-    if (user) {
-      const userNotifications = getUserNotifications(user.id)
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const userNotifications = await getUserNotifications(user.id)
+      if (cancelled) return
       setNotifications(userNotifications)
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user])
 
@@ -46,12 +55,9 @@ export default function VendorNotificationsPage() {
     router.push('/login')
   }
 
-  const handleMarkAsRead = (notificationId: string) => {
-    markNotificationAsRead(notificationId)
-    const updated = notifications.map(n =>
-      n.id === notificationId ? { ...n, read: true } : n
-    )
-    setNotifications(updated)
+  const handleMarkAsRead = async (notificationId: string) => {
+    await markNotificationAsRead(notificationId)
+    setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)))
   }
 
   const getNotificationIcon = (type: string) => {

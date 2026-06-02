@@ -7,7 +7,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, getCurrentUser, setAuthState, initializeDemoAccounts } from '@/lib/auth'
+import { User, getCurrentUser, setAuthState } from '@/lib/auth'
 import {
   getCurrentTokenPayload,
   isTokenExpiringSoon,
@@ -62,11 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   useEffect(() => {
     try {
-      // Initialize demo accounts on first load (development only)
-      if (process.env.NODE_ENV !== 'production') {
-        initializeDemoAccounts()
-      }
-
       // Check for existing valid JWT token
       const tokenPayload = getCurrentTokenPayload()
       if (tokenPayload) {

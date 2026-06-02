@@ -14,11 +14,11 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Lock, User, Bell, Shield, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
-import { updateCurrentUserPassword, updateUserProfile } from '@/lib/auth'
-import { getUserNotifications, markAllNotificationsAsRead } from '@/lib/data'
+import { updateMeApi, updateMyPasswordApi } from '@/lib/auth'
+import { createAdminApiKey, getAdminApiKeys, getUserNotifications, markAllNotificationsAsRead, revokeAdminApiKey, type AdminApiKey } from '@/lib/data'
 
 export default function AdminProfilePage() {
-  const { user } = useAuth()
+  const { user, login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -36,7 +36,7 @@ export default function AdminProfilePage() {
     confirm: '',
   })
   const [notifications, setNotifications] = useState<any[]>([])
-  const [apiKeys, setApiKeys] = useState<{ id: string; key: string; createdAt: string; status: 'active' | 'revoked' }[]>([])
+  const [apiKeys, setApiKeys] = useState<AdminApiKey[]>([])
 
   useEffect(() => {
     if (!user) return
@@ -45,19 +45,19 @@ export default function AdminProfilePage() {
       email: user.email || '',
       phone: user.phone || '',
     })
-    setNotifications(getUserNotifications(user.id))
-  }, [user])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const storedKeys = localStorage.getItem('eventora_admin_api_keys')
-    if (storedKeys) {
-      try {
-        const parsed = JSON.parse(storedKeys)
-        if (Array.isArray(parsed)) setApiKeys(parsed)
-      } catch {}
+    let cancelled = false
+    ;(async () => {
+      const [n, keys] = await Promise.all([getUserNotifications(user.id), getAdminApiKeys()])
+      if (cancelled) return
+      setNotifications(n)
+      setApiKeys(keys)
+    })()
+
+    return () => {
+      cancelled = true
     }
-  }, [])
+  }, [user])
 
   const memberSince = useMemo(() => {
     if (!user?.createdAt) return '—'
@@ -67,25 +67,16 @@ export default function AdminProfilePage() {
     })
   }, [user])
 
-  const persistKeys = (nextKeys: typeof apiKeys) => {
-    setApiKeys(nextKeys)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('eventora_admin_api_keys', JSON.stringify(nextKeys))
-    }
-  }
-
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!user) return
     setIsSaving(true)
-    const result = updateUserProfile(user.id, {
-      fullName: profile.fullName,
-      phone: profile.phone,
-    })
+    const result = await updateMeApi({ fullName: profile.fullName, phone: profile.phone })
+    if (result.success && result.user) login(result.user)
     setSaveMessage(result.message)
     setIsSaving(false)
   }
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     setSecurityMessage('')
     if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
       setSecurityMessage('Please fill in all password fields.')
@@ -95,21 +86,16 @@ export default function AdminProfilePage() {
       setSecurityMessage('New passwords do not match.')
       return
     }
-    const result = updateCurrentUserPassword(passwordForm.current, passwordForm.next)
+    const result = await updateMyPasswordApi(passwordForm.current, passwordForm.next)
     setSecurityMessage(result.message)
     if (result.success) {
       setPasswordForm({ current: '', next: '', confirm: '' })
     }
   }
 
-  const handleGenerateKey = () => {
-    const id = `key_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const key = `evt_${Math.random().toString(36).slice(2, 18)}`
-    const next: typeof apiKeys = [
-      { id, key, createdAt: new Date().toLocaleDateString(), status: 'active' },
-      ...apiKeys,
-    ]
-    persistKeys(next)
+  const handleGenerateKey = async () => {
+    const created = await createAdminApiKey()
+    setApiKeys([created, ...apiKeys])
   }
 
   const handleCopyKey = async (key: string) => {
@@ -121,17 +107,16 @@ export default function AdminProfilePage() {
     }
   }
 
-  const handleRevokeKey = (id: string) => {
-    const next: typeof apiKeys = apiKeys.map((k) =>
-      k.id === id ? { ...k, status: 'revoked' as const } : k
-    )
-    persistKeys(next)
+  const handleRevokeKey = async (id: string) => {
+    await revokeAdminApiKey(id)
+    setApiKeys(apiKeys.map((k) => (k.id === id ? { ...k, status: 'revoked' } : k)))
   }
 
-  const handleMarkNotificationsRead = () => {
+  const handleMarkNotificationsRead = async () => {
     if (!user) return
-    markAllNotificationsAsRead(user.id)
-    setNotifications(getUserNotifications(user.id))
+    await markAllNotificationsAsRead(user.id)
+    const refreshed = await getUserNotifications(user.id)
+    setNotifications(refreshed)
   }
 
   return (

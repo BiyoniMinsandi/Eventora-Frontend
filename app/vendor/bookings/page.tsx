@@ -14,7 +14,7 @@ import { Calendar, CheckCircle2, Clock, MessageCircle, ArrowLeft } from 'lucide-
 import { ProtectedRoute } from '@/components/protected-route'
 import { useAuth } from '@/components/auth-provider'
 import { useEffect, useState } from 'react'
-import { getUserBookings, type Booking, getOrCreateConversation, updateBookingStatus, createNotification } from '@/lib/data'
+import { getUserBookings, type Booking, getOrCreateConversation, updateBookingStatus } from '@/lib/data'
 import { useRouter } from 'next/navigation'
 
 export default function VendorBookingsPage() {
@@ -23,9 +23,18 @@ export default function VendorBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
 
   useEffect(() => {
-    if (user) {
-      const vendorBookings = getUserBookings(user.id, 'vendor')
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const vendorBookings = await getUserBookings(user.id, 'vendor')
+      if (cancelled) return
       setBookings(vendorBookings)
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user])
 
@@ -64,9 +73,9 @@ export default function VendorBookingsPage() {
     }
   }
 
-  const handleMessage = (booking: Booking) => {
+  const handleMessage = async (booking: Booking) => {
     if (!user) return
-    const conversationId = getOrCreateConversation(
+    const conversationId = await getOrCreateConversation(
       booking.customerId,
       booking.customerName || 'Customer',
       user.id,
@@ -75,31 +84,9 @@ export default function VendorBookingsPage() {
     router.push(`/vendor/messages?conversationId=${conversationId}`)
   }
 
-  const handleMarkCompleted = (booking: Booking) => {
-    if (!user) return
-    const updated = updateBookingStatus(booking.id, 'completed')
-    if (!updated) return
-
-    createNotification({
-      userId: booking.customerId,
-      type: 'booking_completed',
-      title: 'Booking marked as completed',
-      message: `${user.businessName || user.fullName} marked your booking as completed. Please leave a review.`,
-      relatedBookingId: booking.id,
-      read: false,
-    })
-    createNotification({
-      userId: booking.customerId,
-      type: 'review_prompt',
-      title: 'Leave a review',
-      message: `How was your experience with ${user.businessName || user.fullName}? Leave a review to help others.`,
-      relatedBookingId: booking.id,
-      read: false,
-    })
-
-    setBookings((prev) =>
-      prev.map((b) => (b.id === booking.id ? { ...b, status: 'completed' } : b))
-    )
+  const handleMarkCompleted = async (booking: Booking) => {
+    await updateBookingStatus(booking.id, 'completed')
+    setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: 'completed' } : b)))
   }
 
   return (

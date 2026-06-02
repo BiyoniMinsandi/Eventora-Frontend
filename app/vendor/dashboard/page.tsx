@@ -47,17 +47,26 @@ export default function VendorDashboard() {
   })
 
   useEffect(() => {
-    if (user) {
-      // Load vendor bookings and derived stats from local storage.
-      const vendorBookings = getUserBookings(user.id, 'vendor')
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const vendorBookings = await getUserBookings(user.id, 'vendor')
+      const bookingStats = await getBookingStats(user.id, 'vendor')
+      if (cancelled) return
+
       setBookings(vendorBookings)
-      const bookingStats = getBookingStats(user.id, 'vendor')
       setStats({
         pending: bookingStats.pending,
         accepted: bookingStats.accepted,
         completed: bookingStats.completed,
         cancelled: bookingStats.cancelled,
       })
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user])
 

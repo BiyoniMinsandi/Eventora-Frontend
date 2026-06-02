@@ -30,12 +30,19 @@ export default function AdminReviewsPage() {
   const [filterRating, setFilterRating] = useState<'all' | number>('all')
 
   useEffect(() => {
-    const allReviews = getReviews()
-    setReviews(allReviews)
+    let cancelled = false
+    ;(async () => {
+      const allReviews = await getReviews()
+      if (!cancelled) setReviews(allReviews)
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  const handleDeleteReview = (reviewId: string) => {
-    const result = deleteReview(reviewId)
+  const handleDeleteReview = async (reviewId: string) => {
+    const result = await deleteReview(reviewId)
     if (result.success) {
       toast({
         title: 'Review Removed',

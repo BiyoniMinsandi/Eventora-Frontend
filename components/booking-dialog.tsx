@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Calendar, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
-import { createBooking, createNotification } from '@/lib/data'
+import { createBooking } from '@/lib/data'
 
 interface BookingDialogProps {
   vendorId: string
@@ -40,7 +40,7 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigge
     specialRequests: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!isAuthenticated || !user) {
@@ -54,33 +54,29 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigge
     }
 
     setLoading(true)
+    try {
+      await createBooking({
+        customerId: user.id,
+        customerName: user.fullName,
+        vendorId,
+        vendorName,
+        vendorBusinessName,
+        service: formData.service,
+        eventDate: formData.eventDate,
+        eventType: formData.eventType,
+        guestCount: formData.guestCount ? parseInt(formData.guestCount) : undefined,
+        budget: formData.budget,
+        specialRequests: formData.specialRequests,
+        status: 'pending',
+      })
 
-    const newBooking = createBooking({
-      customerId: user.id,
-      customerName: user.fullName,
-      vendorId,
-      vendorName,
-      vendorBusinessName,
-      service: formData.service,
-      eventDate: formData.eventDate,
-      eventType: formData.eventType,
-      guestCount: formData.guestCount ? parseInt(formData.guestCount) : undefined,
-      budget: formData.budget,
-      specialRequests: formData.specialRequests,
-      status: 'pending',
-    })
-
-    createNotification({
-      userId: vendorId,
-      type: 'booking_request',
-      title: 'New booking request',
-      message: `${user.fullName} sent a booking request for ${formData.eventType} on ${new Date(formData.eventDate).toLocaleDateString()}.`,
-      relatedBookingId: newBooking.id,
-      read: false,
-    })
-
-    setSuccess(true)
-    setLoading(false)
+      // Notifications are created by the server as the source of truth.
+      setSuccess(true)
+    } catch (e: any) {
+      alert(e?.message || 'Failed to create booking')
+    } finally {
+      setLoading(false)
+    }
 
     // Redirect after a brief success state
     setTimeout(() => {

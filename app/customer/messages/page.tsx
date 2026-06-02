@@ -36,44 +36,63 @@ function CustomerMessagesContent() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (user) {
-      const convs = getUserConversations(user.id, 'customer')
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const convs = await getUserConversations(user.id, 'customer')
+      if (cancelled) return
+
       setConversations(convs)
+
       const fromQuery = searchParams.get('conversationId')
       if (fromQuery) {
         const match = convs.find((c) => c.id === fromQuery)
         setSelectedConversation(match || convs[0] || null)
       } else if (convs.length > 0) {
         setSelectedConversation(convs[0])
+      } else {
+        setSelectedConversation(null)
       }
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user, searchParams])
 
   useEffect(() => {
-    if (selectedConversation) {
-      const convMessages = getConversationMessages(selectedConversation.id)
+    if (!selectedConversation || !user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const convMessages = await getConversationMessages(selectedConversation.id)
+      if (cancelled) return
+
       setMessages(convMessages)
-      
-      // Mark as read
-      if (user) {
-        markConversationAsRead(selectedConversation.id, user.id)
-        // Update conversations list using functional update to avoid stale deps
-                setConversations((prev) =>
-                  prev.map((c) => (c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c))
-                )
-      }
+
+      await markConversationAsRead(selectedConversation.id, user.id)
+
+      if (cancelled) return
+      setConversations((prev) => prev.map((c) => (c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c)))
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [selectedConversation, user])
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!messageInput.trim() || !selectedConversation || !user) return
 
     setLoading(true)
 
-    setTimeout(() => {
-      sendMessage({
+    try {
+      await sendMessage({
         conversationId: selectedConversation.id,
         senderId: user.id,
         senderName: user.fullName,
@@ -82,10 +101,11 @@ function CustomerMessagesContent() {
       })
 
       setMessageInput('')
-      const convMessages = getConversationMessages(selectedConversation.id)
+      const convMessages = await getConversationMessages(selectedConversation.id)
       setMessages(convMessages)
+    } finally {
       setLoading(false)
-    }, 300)
+    }
   }
 
   const formatTime = (timestamp: string) => {

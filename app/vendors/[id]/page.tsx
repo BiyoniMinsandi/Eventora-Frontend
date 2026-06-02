@@ -16,9 +16,9 @@ import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Star, MapPin, Phone, Mail, ArrowLeft, Calendar, AlertCircle } from 'lucide-react'
 import { BookingDialog } from '@/components/booking-dialog'
-import { getVendorReviews, getVendorAverageRating } from '@/lib/data'
+import { getVendorById, getVendors, getVendorReviews } from '@/lib/data'
 import { useEffect, useState } from 'react'
-import { getStoredUsers, type User } from '@/lib/auth'
+import type { User } from '@/lib/auth'
 
 interface VendorProfilePageProps {
   params: {
@@ -46,27 +46,53 @@ export default function VendorProfilePage({ params }: VendorProfilePageProps) {
     (candidate.approved === true || Boolean(candidate.approvedAt))
 
   useEffect(() => {
-    // Locate the vendor from localStorage. Supports both exact id and slug-based URLs.
-    const allUsers = getStoredUsers()
     const paramId = decodeURIComponent(params.id)
-    const found =
-      allUsers.find((u) => u.id === paramId && isApprovedVendor(u)) ||
-      allUsers.find(
-        (u) =>
-          isApprovedVendor(u) &&
-          normalizeSlug(u.businessName || u.fullName) === normalizeSlug(paramId)
-      )
-    setVendor(found || null)
-    setIsLoading(false)
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const direct = await getVendorById(paramId)
+        if (!cancelled) setVendor(direct && isApprovedVendor(direct) ? direct : null)
+      } catch {
+        // Fallback: allow slug-style URLs by searching approved vendors.
+        const allVendors = await getVendors()
+        const found = allVendors.find(
+          (u) =>
+            isApprovedVendor(u) &&
+            normalizeSlug(u.businessName || u.fullName) === normalizeSlug(paramId)
+        )
+        if (!cancelled) setVendor(found || null)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [params.id])
 
   useEffect(() => {
-    // Load reviews and compute the average rating for this vendor.
-    const vendorReviews = getVendorReviews(params.id)
-    setReviews(vendorReviews)
-    const rating = getVendorAverageRating(params.id)
-    setAvgRating(rating)
-  }, [params.id])
+    if (!vendor?.id) {
+      setReviews([])
+      setAvgRating(0)
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      const vendorReviews = await getVendorReviews(vendor.id)
+      if (cancelled) return
+      setReviews(vendorReviews)
+      const count = vendorReviews.length
+      const avg = count === 0 ? 0 : vendorReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / count
+      setAvgRating(avg)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [vendor?.id])
 
   if (!vendor && !isLoading) {
     return (

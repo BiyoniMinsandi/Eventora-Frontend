@@ -30,7 +30,8 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { getStoredUsers, saveUsers, type User } from '@/lib/auth'
+import { type User } from '@/lib/auth'
+import { getAdminUsers, suspendUser, unsuspendUser } from '@/lib/data'
 
 export default function AdminUsersPage() {
   const router = useRouter()
@@ -41,21 +42,16 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null)
 
   useEffect(() => {
-    // Load users from client-side storage (only actual registered users)
-    const stored = getStoredUsers()
-    if (stored && Array.isArray(stored)) {
-      // Remove known demo/sample accounts that were used for prototyping
-      const demoEmails = ['vendor@example.com', 'customer@example.com']
-      const demoNames = ['Demo Vendor', 'Customer User', 'Priya Silva', 'Ananya Perera']
+    let cancelled = false
 
-      const cleaned = stored.filter((u) => {
-        if (!u || !u.email) return false
-        if (demoEmails.includes(u.email)) return false
-        if (u.fullName && demoNames.includes(u.fullName)) return false
-        return true
-      })
+    ;(async () => {
+      const users = await getAdminUsers()
+      if (cancelled) return
+      setRawUsers(users)
+    })()
 
-      setRawUsers(cleaned)
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -68,7 +64,10 @@ export default function AdminUsersPage() {
         role: (u.role || '').charAt(0).toUpperCase() + (u.role || '').slice(1),
         joinedAt: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—',
         bookings: (u as any).bookings || 0,
-        status: u.rejectedAt ? 'suspended' : 'active',
+        status:
+          (u as any).isSuspended || (u as any).suspendedAt || (u as any).rejectedAt
+            ? 'suspended'
+            : 'active',
         lastActive: '—',
         raw: u,
       }))
@@ -93,21 +92,20 @@ export default function AdminUsersPage() {
     })
   }, [mappedUsers, roleFilter, searchQuery, statusFilter])
 
-  const handleToggleStatus = (userId: string) => {
-    const updated = rawUsers.map((u) => {
-      if (u.id !== userId) return u
-      const next = { ...u }
-      if (u.rejectedAt) {
-        next.rejectedAt = undefined
-        next.rejectionReason = undefined
-      } else {
-        next.rejectedAt = new Date().toISOString()
-        next.rejectionReason = 'Suspended by admin'
-      }
-      return next
-    })
-    setRawUsers(updated)
-    saveUsers(updated)
+  const handleToggleStatus = async (userId: string) => {
+    const current = rawUsers.find((u) => u.id === userId)
+    if (!current) return
+
+    const isSuspended = Boolean((current as any).isSuspended || (current as any).suspendedAt || (current as any).rejectedAt)
+
+    if (isSuspended) {
+      await unsuspendUser(userId)
+    } else {
+      await suspendUser(userId, 'Suspended by admin')
+    }
+
+    const users = await getAdminUsers()
+    setRawUsers(users)
   }
 
   const handleEmail = (email: string) => {

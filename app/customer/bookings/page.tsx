@@ -14,7 +14,13 @@ import { Calendar, MessageCircle, AlertTriangle, CheckCircle2, Clock, X, Star, A
 import { useAuth } from '@/components/auth-provider'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { getUserBookings, type Booking, getOrCreateConversation, hasDisputeForBooking, hasUserReviewedBooking } from '@/lib/data'
+import {
+  getUserBookings,
+  type Booking,
+  getOrCreateConversation,
+  getDisputeByBookingId,
+  getReviewByBookingId,
+} from '@/lib/data'
 import { logoutUser } from '@/lib/auth'
 import { ReviewDialog } from '@/components/review-dialog'
 
@@ -22,11 +28,43 @@ export default function CustomerBookingsPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [hasActiveDisputeByBookingId, setHasActiveDisputeByBookingId] = useState<Record<string, boolean>>({})
+  const [hasReviewByBookingId, setHasReviewByBookingId] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    if (user) {
-      const userBookings = getUserBookings(user.id, 'customer')
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const userBookings = await getUserBookings(user.id, 'customer')
+      if (cancelled) return
+
       setBookings(userBookings)
+
+      const disputeEntries = await Promise.all(
+        userBookings.map(async (b) => {
+          const dispute = await getDisputeByBookingId(b.id)
+          const active = !!dispute && (dispute.status === 'open' || dispute.status === 'in-review')
+          return [b.id, active] as const
+        })
+      )
+
+      const reviewEntries = await Promise.all(
+        userBookings.map(async (b) => {
+          const review = await getReviewByBookingId(b.id)
+          return [b.id, !!review] as const
+        })
+      )
+
+      if (cancelled) return
+
+      setHasActiveDisputeByBookingId(Object.fromEntries(disputeEntries))
+      setHasReviewByBookingId(Object.fromEntries(reviewEntries))
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user])
 
@@ -70,9 +108,9 @@ export default function CustomerBookingsPage() {
     return bookings.filter((booking) => booking.status === status)
   }
 
-  const handleMessage = (booking: Booking) => {
+  const handleMessage = async (booking: Booking) => {
     if (!user) return
-    const conversationId = getOrCreateConversation(
+    const conversationId = await getOrCreateConversation(
       user.id,
       user.fullName,
       booking.vendorId,
@@ -87,10 +125,18 @@ export default function CustomerBookingsPage() {
 
   const handleReviewSubmitted = () => {
     // Refresh bookings to reflect review status
-    if (user) {
-      const userBookings = getUserBookings(user.id, 'customer')
+    if (!user) return
+    ;(async () => {
+      const userBookings = await getUserBookings(user.id, 'customer')
       setBookings(userBookings)
-    }
+      const reviewEntries = await Promise.all(
+        userBookings.map(async (b) => {
+          const review = await getReviewByBookingId(b.id)
+          return [b.id, !!review] as const
+        })
+      )
+      setHasReviewByBookingId(Object.fromEntries(reviewEntries))
+    })()
   }
 
   return (
@@ -123,7 +169,8 @@ export default function CustomerBookingsPage() {
               <TabsContent key={tab} value={tab} className="mt-6 space-y-4">
                 {filterBookings(tab).length > 0 ? (
                   filterBookings(tab).map((booking) => {
-                    const hasDispute = hasDisputeForBooking(booking.id)
+                    const hasDispute = !!hasActiveDisputeByBookingId[booking.id]
+                    const hasReview = !!hasReviewByBookingId[booking.id]
                     return (
                       <Card key={booking.id} className="p-6">
                         <div className="flex items-start justify-between">
@@ -194,7 +241,7 @@ export default function CustomerBookingsPage() {
                                 Message
                               </Button>
                             )}
-                            {booking.status === 'completed' && !hasUserReviewedBooking(booking.id) && (
+                            {booking.status === 'completed' && !hasReview && (
                               <ReviewDialog
                                 bookingId={booking.id}
                                 vendorId={booking.vendorId}

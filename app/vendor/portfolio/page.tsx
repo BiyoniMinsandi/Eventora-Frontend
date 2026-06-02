@@ -16,7 +16,7 @@ import { Plus, Trash2, Upload, Eye, EyeOff, Star, X, ArrowLeft } from 'lucide-re
 import Link from 'next/link'
 import { useAuth } from '@/components/auth-provider'
 import { useRouter } from 'next/navigation'
-import { logoutUser, updateUserProfile } from '@/lib/auth'
+import { updateMeApi } from '@/lib/auth'
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,7 @@ interface PortfolioItem {
 }
 
 export default function VendorPortfolio() {
-  const { user, logout } = useAuth()
+  const { user, logout, login } = useAuth()
   const router = useRouter()
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -64,13 +64,14 @@ export default function VendorPortfolio() {
     }
   }, [user])
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!newItem.title || !newItem.description) return
 
     const updatedServices = [...(user?.services || []), `${newItem.title}:${newItem.description}`]
-    const result = updateUserProfile(user!.id, { services: updatedServices })
+    const result = await updateMeApi({ services: updatedServices })
 
     if (result.success) {
+      if (result.user) login(result.user)
       setNewItem({ title: '', description: '' })
       setShowAddDialog(false)
       // Update local state
@@ -85,12 +86,13 @@ export default function VendorPortfolio() {
     }
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const index = parseInt(id.split('_')[1])
     const updatedServices = user?.services?.filter((_, idx) => idx !== index) || []
-    const result = updateUserProfile(user!.id, { services: updatedServices })
+    const result = await updateMeApi({ services: updatedServices })
 
     if (result.success) {
+      if (result.user) login(result.user)
       setPortfolioItems(portfolioItems.filter(item => item.id !== id))
     }
   }

@@ -43,17 +43,27 @@ export default function CustomerDashboard() {
   })
 
   useEffect(() => {
-    if (user) {
-      // Load recent bookings and derived stats from local storage.
-      const userBookings = getUserBookings(user.id, 'customer')
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const userBookings = await getUserBookings(user.id, 'customer')
+      const bookingStats = await getBookingStats(user.id, 'customer')
+
+      if (cancelled) return
+
       setBookings(userBookings.slice(0, 3)) // Latest 3 bookings
-      const bookingStats = getBookingStats(user.id, 'customer')
       setStats({
         total: bookingStats.accepted + bookingStats.pending,
         pending: bookingStats.pending,
         accepted: bookingStats.accepted,
         completed: bookingStats.completed,
       })
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user])
   

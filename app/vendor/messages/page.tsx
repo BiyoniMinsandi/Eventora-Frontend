@@ -33,8 +33,14 @@ export default function VendorMessagesPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (user) {
-      const convs = getUserConversations(user.id, 'vendor')
+    if (!user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const convs = await getUserConversations(user.id, 'vendor')
+      if (cancelled) return
+
       setConversations(convs)
       const fromQuery = searchParams.get('conversationId')
       if (fromQuery) {
@@ -42,43 +48,60 @@ export default function VendorMessagesPage() {
         setSelectedConversation(match || convs[0] || null)
       } else if (convs.length > 0) {
         setSelectedConversation(convs[0])
+      } else {
+        setSelectedConversation(null)
       }
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user, searchParams])
 
   useEffect(() => {
-    if (selectedConversation) {
-      const convMessages = getConversationMessages(selectedConversation.id)
+    if (!selectedConversation || !user) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const convMessages = await getConversationMessages(selectedConversation.id)
+      if (cancelled) return
+
       setMessages(convMessages)
 
-      if (user) {
-        markConversationAsRead(selectedConversation.id, user.id)
-        setConversations((prev) =>
-          prev.map((c) => (c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c))
-        )
-      }
+      await markConversationAsRead(selectedConversation.id, user.id)
+      if (cancelled) return
+
+      setConversations((prev) => prev.map((c) => (c.id === selectedConversation.id ? { ...c, unreadCount: 0 } : c)))
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [selectedConversation, user])
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!messageInput.trim() || !selectedConversation || !user) return
 
     setLoading(true)
 
-    sendMessage({
-      conversationId: selectedConversation.id,
-      senderId: user.id,
-      senderName: user.businessName || user.fullName,
-      receiverId: selectedConversation.customerId,
-      content: messageInput,
-    })
+    try {
+      await sendMessage({
+        conversationId: selectedConversation.id,
+        senderId: user.id,
+        senderName: user.businessName || user.fullName,
+        receiverId: selectedConversation.customerId,
+        content: messageInput,
+      })
 
-    setMessageInput('')
-    const convMessages = getConversationMessages(selectedConversation.id)
-    setMessages(convMessages)
-    setLoading(false)
+      setMessageInput('')
+      const convMessages = await getConversationMessages(selectedConversation.id)
+      setMessages(convMessages)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formatTime = (timestamp: string) => {

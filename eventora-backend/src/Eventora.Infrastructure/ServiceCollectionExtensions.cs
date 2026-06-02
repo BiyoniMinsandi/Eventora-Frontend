@@ -1,7 +1,12 @@
 using Eventora.Infrastructure.Configuration;
 using Eventora.Infrastructure.Mongo;
+using Eventora.Infrastructure.Persistence;
+using Eventora.Infrastructure.Security;
+using Eventora.Application.Abstractions.Persistence;
+using Eventora.Application.Abstractions.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -12,6 +17,26 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Ensure Domain entities remain persistence-agnostic while MongoDB still understands how to map Id.
+        // This maps a property named "Id" to Mongo's "_id" field for all Eventora.Domain types.
+        try
+        {
+            var pack = new ConventionPack
+            {
+                new NamedIdMemberConvention("Id"),
+                new IgnoreExtraElementsConvention(true),
+            };
+
+            ConventionRegistry.Register(
+                "EventoraConventions",
+                pack,
+                t => t.Namespace is not null && t.Namespace.StartsWith("Eventora.Domain", StringComparison.Ordinal));
+        }
+        catch (ArgumentException)
+        {
+            // Convention pack already registered.
+        }
+
         services
             .AddOptions<MongoOptions>()
             .Bind(configuration.GetSection(MongoOptions.SectionName))
@@ -26,6 +51,21 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<IMongoDatabaseFactory, MongoDatabaseFactory>();
+
+        // Mongo collection wrapper
+        services.AddSingleton<MongoCollections>();
+
+        // Security
+        services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+
+        // Repositories
+        services.AddSingleton<IUserRepository, MongoUserRepository>();
+        services.AddSingleton<IBookingRepository, MongoBookingRepository>();
+        services.AddSingleton<IConversationRepository, MongoConversationRepository>();
+        services.AddSingleton<IMessageRepository, MongoMessageRepository>();
+        services.AddSingleton<IReviewRepository, MongoReviewRepository>();
+        services.AddSingleton<IDisputeRepository, MongoDisputeRepository>();
+        services.AddSingleton<INotificationRepository, MongoNotificationRepository>();
 
         return services;
     }

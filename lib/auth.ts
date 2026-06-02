@@ -4,6 +4,7 @@
  */
 
 import { generateJWT, storeToken, getCurrentTokenPayload, clearTokens, AuthToken, verifyJWT } from './jwt'
+import { apiFetch } from '@/lib/api'
 import { validateEmail, validatePassword } from './validation'
 import { AuthenticationError, ConflictError, NotFoundError, ErrorLogger } from './errors'
 
@@ -77,31 +78,14 @@ function verifyPasswordHash(password: string, hash: string): boolean {
 // LocalStorage keys
 const AUTH_STORAGE_KEY = 'eventora_auth'
 const USERS_STORAGE_KEY = 'eventora_users'
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5125'
 
 /**
  * Get all registered users from localStorage
  * @returns Array of registered users
  */
 export function getStoredUsers(): User[] {
-  if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(USERS_STORAGE_KEY)
-  if (!stored) return []
-
-  try {
-    const parsed = JSON.parse(stored)
-    if (!Array.isArray(parsed)) return []
-
-    return parsed.map((raw) => {
-      if (!raw || typeof raw !== 'object') return raw as User
-      const approvedValue = (raw as any).approved
-      const normalizedApproved =
-        approvedValue === 'true' ? true : approvedValue === 'false' ? false : approvedValue
-      return { ...(raw as any), approved: normalizedApproved } as User
-    })
-  } catch {
-    return []
-  }
+  throw new Error('Local demo users (getStoredUsers) are disabled. Use backend APIs via lib/data + lib/auth API helpers.')
 }
 
 /**
@@ -109,8 +93,8 @@ export function getStoredUsers(): User[] {
  * @param users - Users array to save
  */
 export function saveUsers(users: User[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users))
+  void users
+  throw new Error('Local demo users (saveUsers) are disabled. Persist users in the backend instead.')
 }
 
 /**
@@ -486,45 +470,9 @@ export function logoutUser(): { success: boolean; message: string } {
 }
 
 export function updateCurrentUserPassword(currentPassword: string, newPassword: string): { success: boolean; message: string } {
-  try {
-    const currentUser = getCurrentUser()
-    if (!currentUser) {
-      return { success: false, message: 'No authenticated user' }
-    }
-
-    const passwordValidation = validatePassword(newPassword)
-    if (!passwordValidation.valid) {
-      return { success: false, message: passwordValidation.errors[0] }
-    }
-
-    const users = getStoredUsers()
-    const userIndex = users.findIndex((u) => u.id === currentUser.id)
-    if (userIndex === -1) {
-      return { success: false, message: 'User not found' }
-    }
-
-    const user = users[userIndex]
-    if (!user.password) {
-      const passwordKey = `eventora_pwd_${user.id}`
-      const storedPassword = typeof window !== 'undefined' ? localStorage.getItem(passwordKey) : null
-      if (storedPassword !== currentPassword) {
-        return { success: false, message: 'Current password is incorrect' }
-      }
-    } else if (!verifyPasswordHash(currentPassword, user.password)) {
-      return { success: false, message: 'Current password is incorrect' }
-    }
-
-    users[userIndex] = {
-      ...user,
-      password: hashPassword(newPassword),
-    }
-    saveUsers(users)
-    return { success: true, message: 'Password updated successfully' }
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    ErrorLogger.log(err, { action: 'updateCurrentUserPassword' })
-    return { success: false, message: err.message }
-  }
+  void currentPassword
+  void newPassword
+  throw new Error('Local demo password updates are disabled. Use updateMyPasswordApi() to update password via the backend.')
 }
 
 /**
@@ -708,43 +656,50 @@ export function updateUserProfile(
   userId: string,
   updates: Partial<User>
 ): { success: boolean; message: string; user?: User } {
+  void userId
+  void updates
+  throw new Error('Local demo profile updates are disabled. Use updateMeApi() to update the current user via the backend.')
+}
+
+export async function updateMeApi(
+  updates: Partial<User>
+): Promise<{ success: boolean; message: string; user?: User }>
+{
   try {
-    const users = getStoredUsers()
-    const userIndex = users.findIndex((u) => u.id === userId)
+    const updated = await apiFetch<User>('/api/users/me', {
+      method: 'PUT',
+      body: updates,
+    })
 
-    if (userIndex === -1) {
-      throw new NotFoundError('User')
+    // Keep local auth state in sync so refresh-less navigation works.
+    setAuthState(updated)
+
+    return { success: true, message: 'Profile updated successfully', user: updated }
+  } catch (error: any) {
+    const message = error?.message || 'Failed to update profile'
+    return { success: false, message }
+  }
+}
+
+export async function updateMyPasswordApi(
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; message: string }>
+{
+  try {
+    const passwordValidation = validatePassword(newPassword)
+    if (!passwordValidation.valid) {
+      return { success: false, message: passwordValidation.errors[0] }
     }
 
-    // If password is being updated, hash it
-    if (updates.password) {
-      updates.password = hashPassword(updates.password)
-    }
+    await apiFetch('/api/users/me/password', {
+      method: 'POST',
+      body: { currentPassword, newPassword },
+    })
 
-    // Merge updates (excluding sensitive fields)
-    users[userIndex] = {
-      ...users[userIndex],
-      ...updates,
-      id: users[userIndex].id, // Prevent ID change
-      email: users[userIndex].email, // Prevent email change
-      createdAt: users[userIndex].createdAt, // Prevent createdAt change
-    }
-
-    saveUsers(users)
-
-    // Update auth state if it's the current user
-    const currentUser = getCurrentUser()
-    if (currentUser?.id === userId) {
-      setAuthState(users[userIndex])
-    }
-
-    const userResponse = { ...users[userIndex] }
-    delete userResponse.password
-
-    return { success: true, message: 'Profile updated successfully', user: userResponse }
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    ErrorLogger.log(err, { action: 'updateUserProfile', userId })
-    return { success: false, message: err.message }
+    return { success: true, message: 'Password updated successfully' }
+  } catch (error: any) {
+    const message = error?.message || 'Failed to update password'
+    return { success: false, message }
   }
 }

@@ -49,18 +49,25 @@ function CustomerDisputesContent() {
   })
 
   useEffect(() => {
-    if (user) {
-      const userDisputes = getUserDisputes(user.id, 'customer')
+    if (!user) return
+
+    let cancelled = false
+    ;(async () => {
+      const [userDisputes, userBookings] = await Promise.all([
+        getUserDisputes(user.id, 'customer'),
+        getUserBookings(user.id, 'customer'),
+      ])
+      if (cancelled) return
       setDisputes(userDisputes)
-      
-      const userBookings = getUserBookings(user.id, 'customer')
       setBookings(userBookings)
-      
+
       // If bookingId is provided in URL, open dialog
       const bookingId = searchParams.get('bookingId')
-      if (bookingId) {
-        setShowDialog(true)
-      }
+      if (bookingId) setShowDialog(true)
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [user, searchParams])
 
@@ -86,7 +93,7 @@ function CustomerDisputesContent() {
     }
 
     // Validate using the backend validation function
-    const validation = canCreateDispute(user.id, formData.bookingId)
+    const validation = await canCreateDispute(user.id, formData.bookingId)
     if (!validation.can) {
       toast({
         title: 'Cannot Create Dispute',
@@ -96,7 +103,7 @@ function CustomerDisputesContent() {
       return
     }
 
-    const booking = getBookingById(formData.bookingId)
+    const booking = await getBookingById(formData.bookingId)
     if (!booking) {
       toast({
         title: 'Error',
@@ -108,7 +115,7 @@ function CustomerDisputesContent() {
 
     setIsSubmitting(true)
 
-    const result = createDispute({
+    const result = await createDispute({
       bookingId: formData.bookingId,
       customerId: user.id,
       customerName: user.fullName,
@@ -132,7 +139,7 @@ function CustomerDisputesContent() {
     }
 
     if (result.dispute) {
-      setDisputes([...disputes, result.dispute])
+      setDisputes((prev) => [...prev, result.dispute!])
     }
     
     toast({

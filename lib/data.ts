@@ -1,4 +1,7 @@
-// Data management for bookings, messages, and reviews using localStorage
+// Data management for bookings, messages, reviews, disputes, and notifications via backend API.
+
+import { apiFetch } from '@/lib/api'
+import { getCurrentUser, type User } from '@/lib/auth'
 
 export interface Booking {
   id: string
@@ -82,406 +85,373 @@ export interface Dispute {
   resolution?: string
 }
 
-// LocalStorage keys
-const BOOKINGS_KEY = 'eventora_bookings'
-const MESSAGES_KEY = 'eventora_messages'
-const CONVERSATIONS_KEY = 'eventora_conversations'
-const REVIEWS_KEY = 'eventora_reviews'
-const DISPUTES_KEY = 'eventora_disputes'
-const NOTIFICATIONS_KEY = 'eventora_notifications'
+// Vendors (public)
+export async function getVendors(params?: { search?: string; category?: string; location?: string }): Promise<User[]> {
+  const qs = new URLSearchParams()
+  if (params?.search) qs.set('search', params.search)
+  if (params?.category) qs.set('category', params.category)
+  if (params?.location) qs.set('location', params.location)
+
+  const suffix = qs.toString() ? `?${qs}` : ''
+  return await apiFetch<User[]>(`/api/vendors${suffix}`, { auth: false })
+}
+
+export async function getVendorById(id: string): Promise<User> {
+  return await apiFetch<User>(`/api/vendors/${id}`, { auth: false })
+}
+
+// Admin users & vendor approvals
+export async function getAdminUsers(): Promise<User[]> {
+  return await apiFetch<User[]>(`/api/admin/users`)
+}
+
+export async function getPendingVendors(): Promise<User[]> {
+  return await apiFetch<User[]>(`/api/admin/vendors/pending`)
+}
+
+export async function approveVendor(vendorId: string): Promise<User> {
+  return await apiFetch<User>(`/api/admin/vendors/${vendorId}/approve`, { method: 'POST', body: {} })
+}
+
+export async function rejectVendor(vendorId: string, reason: string): Promise<User> {
+  return await apiFetch<User>(`/api/admin/vendors/${vendorId}/reject`, { method: 'POST', body: { reason } })
+}
+
+export async function suspendUser(userId: string, reason?: string): Promise<User> {
+  return await apiFetch<User>(`/api/admin/users/${userId}/suspend`, { method: 'POST', body: { reason } })
+}
+
+export async function unsuspendUser(userId: string): Promise<User> {
+  return await apiFetch<User>(`/api/admin/users/${userId}/unsuspend`, { method: 'POST', body: {} })
+}
 
 // Booking Management
-export function getBookings(): Booking[] {
-  if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(BOOKINGS_KEY)
-  return stored ? JSON.parse(stored) : []
-}
-
-export function saveBookings(bookings: Booking[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings))
-}
-
-export function getUserBookings(userId: string, role: 'customer' | 'vendor'): Booking[] {
-  const bookings = getBookings()
-  return bookings.filter(b => 
-    role === 'customer' ? b.customerId === userId : b.vendorId === userId
-  )
-}
-
-export function createBooking(bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>): Booking {
-  const bookings = getBookings()
-  const newBooking: Booking = {
-    ...bookingData,
-    id: `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+export async function getBookings(): Promise<Booking[]> {
+  const user = getCurrentUser()
+  if (user?.role === 'admin') {
+    return await apiFetch<Booking[]>(`/api/admin/bookings`)
   }
-  bookings.push(newBooking)
-  saveBookings(bookings)
-  return newBooking
+
+  return await apiFetch<Booking[]>(`/api/bookings`)
 }
 
-export function updateBookingStatus(
+export async function getUserBookings(userId: string, role: 'customer' | 'vendor'): Promise<Booking[]> {
+  const list = await getBookings()
+  return list.filter((b) => (role === 'customer' ? b.customerId === userId : b.vendorId === userId))
+}
+
+export async function createBooking(bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>): Promise<Booking> {
+  return await apiFetch<Booking>(`/api/bookings`, {
+    method: 'POST',
+    body: {
+      vendorId: bookingData.vendorId,
+      service: bookingData.service,
+      eventDate: bookingData.eventDate,
+      eventType: bookingData.eventType,
+      guestCount: bookingData.guestCount,
+      budget: bookingData.budget,
+      specialRequests: bookingData.specialRequests,
+    },
+  })
+}
+
+export async function updateBookingStatus(
   bookingId: string,
   status: Booking['status'],
   vendorResponseNote?: string
-): boolean {
-  const bookings = getBookings()
-  const index = bookings.findIndex(b => b.id === bookingId)
-  if (index === -1) return false
-  
-  bookings[index].status = status
-  if (vendorResponseNote && vendorResponseNote.trim()) {
-    bookings[index].vendorResponseNote = vendorResponseNote.trim()
-  }
-  bookings[index].updatedAt = new Date().toISOString()
-  saveBookings(bookings)
-  return true
-}
-
-export function getBookingById(bookingId: string): Booking | undefined {
-  return getBookings().find(b => b.id === bookingId)
-}
-
-// Message Management
-export function getMessages(): Message[] {
-  if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(MESSAGES_KEY)
-  return stored ? JSON.parse(stored) : []
-}
-
-export function saveMessages(messages: Message[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages))
-}
-
-export function getConversationMessages(conversationId: string): Message[] {
-  return getMessages().filter(m => m.conversationId === conversationId)
-}
-
-export function sendMessage(messageData: Omit<Message, 'id' | 'timestamp' | 'read'>): Message {
-  const messages = getMessages()
-  const newMessage: Message = {
-    ...messageData,
-    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    timestamp: new Date().toISOString(),
-    read: false,
-  }
-  messages.push(newMessage)
-  saveMessages(messages)
-  
-  // Update conversation
-  updateConversation(messageData.conversationId, newMessage.content, messageData.receiverId)
-  
-  return newMessage
-}
-
-export function markMessageAsRead(messageId: string): void {
-  const messages = getMessages()
-  const message = messages.find(m => m.id === messageId)
-  if (message) {
-    message.read = true
-    saveMessages(messages)
+): Promise<Booking> {
+  switch (status) {
+    case 'accepted':
+      return await apiFetch<Booking>(`/api/bookings/${bookingId}/accept`, {
+        method: 'POST',
+        body: { vendorResponseNote },
+      })
+    case 'rejected':
+      return await apiFetch<Booking>(`/api/bookings/${bookingId}/reject`, {
+        method: 'POST',
+        body: { vendorResponseNote },
+      })
+    case 'cancelled':
+      return await apiFetch<Booking>(`/api/bookings/${bookingId}/cancel`, { method: 'POST', body: {} })
+    case 'completed':
+      return await apiFetch<Booking>(`/api/bookings/${bookingId}/complete`, { method: 'POST', body: {} })
+    default:
+      throw new Error(`Unsupported booking transition: ${status}`)
   }
 }
 
-export function markConversationAsRead(conversationId: string, userId: string): void {
-  const messages = getMessages()
-  messages.forEach(m => {
-    if (m.conversationId === conversationId && m.receiverId === userId) {
-      m.read = true
-    }
+export async function getBookingById(bookingId: string): Promise<Booking | undefined> {
+  try {
+    return await apiFetch<Booking>(`/api/bookings/${bookingId}`)
+  } catch (e: any) {
+    if (e?.status === 404) return undefined
+    throw e
+  }
+}
+
+// Messaging
+export async function getUserConversations(userId: string, role: 'customer' | 'vendor'): Promise<Conversation[]> {
+  const list = await apiFetch<Conversation[]>(`/api/conversations`)
+  return list.filter((c) => (role === 'customer' ? c.customerId === userId : c.vendorId === userId))
+}
+
+export async function getOrCreateConversation(
+  customerId: string,
+  customerName: string,
+  vendorId: string,
+  vendorName: string
+): Promise<string> {
+  const res = await apiFetch<{ id: string }>(`/api/conversations/get-or-create`, {
+    method: 'POST',
+    body: { customerId, customerName, vendorId, vendorName },
   })
-  saveMessages(messages)
-  
-  // Update conversation unread count
-  const conversations = getConversations()
-  const conv = conversations.find(c => c.id === conversationId)
-  if (conv) {
-    conv.unreadCount = 0
-    saveConversations(conversations)
+  return res.id
+}
+
+export async function getConversationMessages(conversationId: string): Promise<Message[]> {
+  return await apiFetch<Message[]>(`/api/conversations/${conversationId}/messages`)
+}
+
+export async function sendMessage(messageData: Omit<Message, 'id' | 'timestamp' | 'read'>): Promise<Message> {
+  return await apiFetch<Message>(`/api/conversations/${messageData.conversationId}/messages`, {
+    method: 'POST',
+    body: { receiverId: messageData.receiverId, content: messageData.content },
+  })
+}
+
+export async function markConversationAsRead(conversationId: string, _userId: string): Promise<void> {
+  await apiFetch(`/api/conversations/${conversationId}/read`, { method: 'POST', body: {} })
+}
+
+// Reviews
+export async function getVendorReviews(vendorId: string): Promise<Review[]> {
+  return await apiFetch<Review[]>(`/api/reviews/vendor/${vendorId}`, { auth: false })
+}
+
+export async function getReviewByBookingId(bookingId: string): Promise<Review | undefined> {
+  try {
+    return await apiFetch<Review>(`/api/reviews/booking/${bookingId}`)
+  } catch (e: any) {
+    if (e?.status === 404) return undefined
+    throw e
   }
 }
 
-// Conversation Management
-export function getConversations(): Conversation[] {
-  if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(CONVERSATIONS_KEY)
-  return stored ? JSON.parse(stored) : []
+export async function hasUserReviewedBooking(bookingId: string): Promise<boolean> {
+  const review = await getReviewByBookingId(bookingId)
+  return !!review
 }
 
-export function saveConversations(conversations: Conversation[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations))
+export async function createReview(reviewData: Omit<Review, 'id' | 'createdAt'>): Promise<Review> {
+  return await apiFetch<Review>(`/api/reviews`, {
+    method: 'POST',
+    body: { bookingId: reviewData.bookingId, rating: reviewData.rating, comment: reviewData.comment },
+  })
 }
 
-export function getUserConversations(userId: string, role: 'customer' | 'vendor'): Conversation[] {
-  const conversations = getConversations()
-  return conversations.filter(c => 
-    role === 'customer' ? c.customerId === userId : c.vendorId === userId
-  )
-}
-
-export function getOrCreateConversation(customerId: string, customerName: string, vendorId: string, vendorName: string): string {
-  const conversations = getConversations()
-  
-  // Check if conversation already exists
-  const existing = conversations.find(c => 
-    c.customerId === customerId && c.vendorId === vendorId
-  )
-  
-  if (existing) return existing.id
-  
-  // Create new conversation
-  const newConversation: Conversation = {
-    id: `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    customerId,
-    customerName,
-    vendorId,
-    vendorName,
-    lastMessage: 'No messages yet',
-    lastMessageTime: new Date().toISOString(),
-    unreadCount: 0,
-  }
-  
-  conversations.push(newConversation)
-  saveConversations(conversations)
-  return newConversation.id
-}
-
-function updateConversation(conversationId: string, lastMessage: string, receiverId: string): void {
-  const conversations = getConversations()
-  const conv = conversations.find(c => c.id === conversationId)
-  if (conv) {
-    conv.lastMessage = lastMessage.substring(0, 50) + (lastMessage.length > 50 ? '...' : '')
-    conv.lastMessageTime = new Date().toISOString()
-    conv.unreadCount += 1
-    saveConversations(conversations)
-  }
-}
-
-// Review Management
-export function getReviews(): Review[] {
-  if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(REVIEWS_KEY)
-  return stored ? JSON.parse(stored) : []
-}
-
-export function saveReviews(reviews: Review[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews))
-}
-
-export function getVendorReviews(vendorId: string): Review[] {
-  return getReviews().filter(r => r.vendorId === vendorId)
-}
-
-export function canUserReview(customerId: string, vendorId: string): boolean {
-  const bookings = getBookings()
-  // User can review if they have a completed booking with this vendor
-  return bookings.some(b => 
-    b.customerId === customerId && 
-    b.vendorId === vendorId && 
-    b.status === 'completed'
-  )
-}
-
-export function hasUserReviewedBooking(bookingId: string): boolean {
-  return getReviews().some(r => r.bookingId === bookingId)
-}
-
-export function createReview(reviewData: Omit<Review, 'id' | 'createdAt'>): Review {
-  const reviews = getReviews()
-  const newReview: Review = {
-    ...reviewData,
-    id: `review_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    createdAt: new Date().toISOString(),
-  }
-  reviews.push(newReview)
-  saveReviews(reviews)
-  return newReview
-}
-
-export function getVendorAverageRating(vendorId: string): number {
-  const reviews = getVendorReviews(vendorId)
+export async function getVendorAverageRating(vendorId: string): Promise<number> {
+  const reviews = await getVendorReviews(vendorId)
   if (reviews.length === 0) return 0
-  const sum = reviews.reduce((acc, r) => acc + r.rating, 0)
-  return sum / reviews.length
+  return reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
 }
 
-export function deleteReview(reviewId: string): { success: boolean; message: string } {
-  const reviews = getReviews()
-  const reviewIndex = reviews.findIndex(r => r.id === reviewId)
-  
-  if (reviewIndex === -1) {
-    return { success: false, message: 'Review not found' }
-  }
-  
-  reviews.splice(reviewIndex, 1)
-  saveReviews(reviews)
+export async function getReviews(): Promise<Review[]> {
+  // Admin list
+  return await apiFetch<Review[]>(`/api/admin/reviews`)
+}
+
+export async function deleteReview(reviewId: string): Promise<{ success: boolean; message: string }> {
+  await apiFetch(`/api/admin/reviews/${reviewId}`, { method: 'DELETE' })
   return { success: true, message: 'Review removed successfully' }
 }
 
 // Statistics
-export function getBookingStats(userId: string, role: 'customer' | 'vendor') {
-  const bookings = getUserBookings(userId, role)
+export async function getBookingStats(userId: string, role: 'customer' | 'vendor') {
+  const bookings = await getUserBookings(userId, role)
   return {
     total: bookings.length,
-    pending: bookings.filter(b => b.status === 'pending').length,
-    accepted: bookings.filter(b => b.status === 'accepted').length,
-    completed: bookings.filter(b => b.status === 'completed').length,
-    rejected: bookings.filter(b => b.status === 'rejected').length,
-    cancelled: bookings.filter(b => b.status === 'cancelled').length,
+    pending: bookings.filter((b) => b.status === 'pending').length,
+    accepted: bookings.filter((b) => b.status === 'accepted').length,
+    completed: bookings.filter((b) => b.status === 'completed').length,
+    rejected: bookings.filter((b) => b.status === 'rejected').length,
+    cancelled: bookings.filter((b) => b.status === 'cancelled').length,
   }
 }
-// Dispute Management
-export function getDisputes(): Dispute[] {
-  if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(DISPUTES_KEY)
-  return stored ? JSON.parse(stored) : []
+
+// Disputes
+export async function getDisputes(): Promise<Dispute[]> {
+  return await apiFetch<Dispute[]>(`/api/disputes`)
 }
 
-export function saveDisputes(disputes: Dispute[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(DISPUTES_KEY, JSON.stringify(disputes))
+export async function getUserDisputes(userId: string, role: 'customer' | 'vendor'): Promise<Dispute[]> {
+  const list = await getDisputes()
+  return list.filter((d) => (role === 'customer' ? d.customerId === userId : d.vendorId === userId))
 }
 
-export function getUserDisputes(userId: string, role: 'customer' | 'vendor'): Dispute[] {
-  const disputes = getDisputes()
-  return disputes.filter(d => 
-    role === 'customer' ? d.customerId === userId : d.vendorId === userId
-  )
+export async function getDisputeByBookingId(bookingId: string): Promise<Dispute | undefined> {
+  const list = await getDisputes()
+  return list.find((d) => d.bookingId === bookingId)
 }
 
-export function canCreateDispute(customerId: string, bookingId: string): { can: boolean; message?: string } {
-  // Get the booking
-  const booking = getBookingById(bookingId)
-  
-  if (!booking) {
-    return { can: false, message: 'Booking not found' }
-  }
+export async function hasDisputeForBooking(bookingId: string): Promise<boolean> {
+  const disputes = await getDisputes()
+  return disputes.some((d) => d.bookingId === bookingId && (d.status === 'open' || d.status === 'in-review'))
+}
 
-  // Verify booking belongs to the customer
+export async function canCreateDispute(customerId: string, bookingId: string): Promise<{ can: boolean; message?: string }> {
+  const booking = await getBookingById(bookingId)
+  if (!booking) return { can: false, message: 'Booking not found' }
+
   if (booking.customerId !== customerId) {
     return { can: false, message: 'You can only dispute your own bookings' }
   }
 
-  // Verify booking status is eligible (completed or accepted)
   if (booking.status !== 'completed' && booking.status !== 'accepted') {
-    return { can: false, message: `You can only dispute completed or accepted bookings, this booking is ${booking.status}` }
+    return {
+      can: false,
+      message: `You can only dispute completed or accepted bookings, this booking is ${booking.status}`,
+    }
   }
 
-  // Check if dispute already exists and is active
-  const existingDispute = getDisputeByBookingId(bookingId)
-  if (existingDispute && (existingDispute.status === 'open' || existingDispute.status === 'in-review')) {
+  const existing = await getDisputeByBookingId(bookingId)
+  if (existing && (existing.status === 'open' || existing.status === 'in-review')) {
     return { can: false, message: 'An active dispute already exists for this booking' }
   }
 
   return { can: true }
 }
 
-export function createDispute(disputeData: Omit<Dispute, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'resolution'>): { success: boolean; message: string; dispute?: Dispute } {
-  // Validate that customer can create this dispute
-  const validation = canCreateDispute(disputeData.customerId, disputeData.bookingId)
-  if (!validation.can) {
-    return { success: false, message: validation.message || 'Cannot create dispute' }
+export async function createDispute(
+  disputeData: Omit<Dispute, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'resolution'>
+): Promise<{ success: boolean; message: string; dispute?: Dispute }> {
+  try {
+    const dispute = await apiFetch<Dispute>(`/api/disputes`, {
+      method: 'POST',
+      body: {
+        bookingId: disputeData.bookingId,
+        title: disputeData.title,
+        description: disputeData.description,
+        category: disputeData.category,
+        evidence: disputeData.evidence,
+      },
+    })
+    return { success: true, message: 'Dispute created successfully', dispute }
+  } catch (e: any) {
+    return { success: false, message: e?.message || 'Failed to create dispute' }
   }
-
-  const disputes = getDisputes()
-  const newDispute: Dispute = {
-    ...disputeData,
-    id: `dispute_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    status: 'open',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-  disputes.push(newDispute)
-  saveDisputes(disputes)
-  createNotification({
-    userId: newDispute.vendorId,
-    type: 'dispute_update',
-    title: 'New dispute raised',
-    message: `A customer opened a dispute for booking ${newDispute.bookingId}.`,
-    relatedBookingId: newDispute.bookingId,
-    relatedDisputeId: newDispute.id,
-    read: false,
-  })
-  return { success: true, message: 'Dispute created successfully', dispute: newDispute }
 }
 
-export function updateDisputeStatus(disputeId: string, status: Dispute['status'], resolution?: string): boolean {
-  const disputes = getDisputes()
-  const index = disputes.findIndex(d => d.id === disputeId)
-  if (index === -1) return false
-  
-  disputes[index].status = status
-  disputes[index].updatedAt = new Date().toISOString()
-  if (resolution) {
-    disputes[index].resolution = resolution
-  }
-  saveDisputes(disputes)
+export async function updateDisputeStatus(disputeId: string, status: Dispute['status'], resolution?: string): Promise<boolean> {
+  await apiFetch(`/api/admin/disputes/${disputeId}`, {
+    method: 'PATCH',
+    body: { status, resolution },
+  })
   return true
 }
 
-export function getDisputeByBookingId(bookingId: string): Dispute | undefined {
-  return getDisputes().find(d => d.bookingId === bookingId)
+// Notifications
+export async function getUserNotifications(_userId: string): Promise<Notification[]> {
+  const list = await apiFetch<Notification[]>(`/api/notifications`)
+  return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
-export function hasDisputeForBooking(bookingId: string): boolean {
-  return getDisputes().some(d => d.bookingId === bookingId && (d.status === 'open' || d.status === 'in-review'))
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  const list = await getUserNotifications(userId)
+  return list.filter((n) => !n.read).length
 }
 
-// Notification Management
-export function getNotifications(): Notification[] {
-  if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(NOTIFICATIONS_KEY)
-  return stored ? JSON.parse(stored) : []
+export async function markNotificationAsRead(notificationId: string): Promise<void> {
+  await apiFetch(`/api/notifications/${notificationId}/read`, { method: 'POST', body: {} })
 }
 
-export function saveNotifications(notifications: Notification[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications))
+export async function markAllNotificationsAsRead(_userId: string): Promise<void> {
+  await apiFetch(`/api/notifications/read-all`, { method: 'POST', body: {} })
 }
 
-export function getUserNotifications(userId: string): Notification[] {
-  const notifications = getNotifications()
-  return notifications.filter(n => n.userId === userId).sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )
+// Client-side notifications are no longer supported; the server is the source of truth.
+export function createNotification(): never {
+  throw new Error('Notifications are created by the server. Remove createNotification() calls.')
 }
 
-export function getUnreadNotificationCount(userId: string): number {
-  return getUserNotifications(userId).filter(n => !n.read).length
+// Admin settings & content (platform configuration)
+export interface AdminApiKey {
+  id: string
+  key: string
+  createdAt: string
+  status: 'active' | 'revoked'
 }
 
-export function createNotification(notificationData: Omit<Notification, 'id' | 'createdAt'>): Notification {
-  const notifications = getNotifications()
-  const newNotification: Notification = {
-    ...notificationData,
-    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    createdAt: new Date().toISOString(),
-  }
-  notifications.push(newNotification)
-  saveNotifications(notifications)
-  return newNotification
+export interface AdminSettings {
+  platformName: string
+  platformUrl: string
+  supportEmail: string
+  commissionRate: string
+  maintenanceEnabled: boolean
+  maintenanceMessage: string
+  smtpHost: string
+  smtpPort: string
+  smtpEmail: string
+  smtpPassword?: string
+  twoFactorEnabled: boolean
 }
 
-export function markNotificationAsRead(notificationId: string): void {
-  const notifications = getNotifications()
-  const notif = notifications.find(n => n.id === notificationId)
-  if (notif) {
-    notif.read = true
-    saveNotifications(notifications)
-  }
+export async function getAdminSettings(): Promise<AdminSettings> {
+  return await apiFetch<AdminSettings>(`/api/admin/settings`)
 }
 
-export function markAllNotificationsAsRead(userId: string): void {
-  const notifications = getNotifications()
-  notifications.forEach(n => {
-    if (n.userId === userId && !n.read) {
-      n.read = true
-    }
-  })
-  saveNotifications(notifications)
+export async function updateAdminSettings(settings: Partial<AdminSettings>): Promise<AdminSettings> {
+  return await apiFetch<AdminSettings>(`/api/admin/settings`, { method: 'PUT', body: settings })
+}
+
+export async function testAdminEmailSettings(): Promise<{ success: boolean; message: string }> {
+  return await apiFetch<{ success: boolean; message: string }>(`/api/admin/settings/test-email`, { method: 'POST', body: {} })
+}
+
+export async function getAdminApiKeys(): Promise<AdminApiKey[]> {
+  return await apiFetch<AdminApiKey[]>(`/api/admin/api-keys`)
+}
+
+export async function createAdminApiKey(): Promise<AdminApiKey> {
+  return await apiFetch<AdminApiKey>(`/api/admin/api-keys`, { method: 'POST', body: {} })
+}
+
+export async function revokeAdminApiKey(keyId: string): Promise<void> {
+  await apiFetch(`/api/admin/api-keys/${keyId}/revoke`, { method: 'POST', body: {} })
+}
+
+export interface AdminPage {
+  id: string
+  title: string
+  slug: string
+  status: 'published' | 'draft'
+  views?: number
+  lastUpdated?: string
+}
+
+export interface AdminFaq {
+  id: string
+  question: string
+  answer?: string
+  category?: string
+  status: 'published' | 'draft'
+  views?: number
+}
+
+export interface AdminCategory {
+  id: string
+  name: string
+  active: boolean
+  vendors?: number
+}
+
+export async function getAdminPages(): Promise<AdminPage[]> {
+  return await apiFetch<AdminPage[]>(`/api/admin/content/pages`)
+}
+
+export async function getAdminFaqs(): Promise<AdminFaq[]> {
+  return await apiFetch<AdminFaq[]>(`/api/admin/content/faqs`)
+}
+
+export async function getAdminCategories(): Promise<AdminCategory[]> {
+  return await apiFetch<AdminCategory[]>(`/api/admin/content/categories`)
 }

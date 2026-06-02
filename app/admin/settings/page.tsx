@@ -12,7 +12,17 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { updateCurrentUserPassword } from '@/lib/auth'
+import { updateMyPasswordApi } from '@/lib/auth'
+import {
+  createAdminApiKey,
+  getAdminApiKeys,
+  getAdminSettings,
+  revokeAdminApiKey,
+  testAdminEmailSettings,
+  updateAdminSettings,
+  type AdminApiKey,
+  type AdminSettings,
+} from '@/lib/data'
 import {
   Settings,
   Save,
@@ -33,7 +43,7 @@ export default function AdminSettings() {
   const [saveMessage, setSaveMessage] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [securityMessage, setSecurityMessage] = useState('')
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<AdminSettings>({
     platformName: 'Eventora',
     platformUrl: 'https://eventora.com',
     supportEmail: 'support@eventora.com',
@@ -51,60 +61,50 @@ export default function AdminSettings() {
     next: '',
     confirm: '',
   })
-  const [apiKeys, setApiKeys] = useState<{ id: string; key: string; createdAt: string; status: 'active' | 'revoked' }[]>([])
+  const [apiKeys, setApiKeys] = useState<AdminApiKey[]>([])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const stored = localStorage.getItem('eventora_admin_settings')
-    const storedKeys = localStorage.getItem('eventora_api_keys')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        setSettings((prev) => ({ ...prev, ...parsed }))
-      } catch {}
-    }
-    if (storedKeys) {
-      try {
-        const parsedKeys = JSON.parse(storedKeys)
-        if (Array.isArray(parsedKeys)) setApiKeys(parsedKeys)
-      } catch {}
+    let cancelled = false
+    ;(async () => {
+      const [s, keys] = await Promise.all([getAdminSettings(), getAdminApiKeys()])
+      if (cancelled) return
+      setSettings(s)
+      setApiKeys(keys)
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [])
 
   const persistSettings = (nextSettings: typeof settings) => {
     setSettings(nextSettings)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('eventora_admin_settings', JSON.stringify(nextSettings))
-    }
   }
 
-  const persistKeys = (nextKeys: typeof apiKeys) => {
-    setApiKeys(nextKeys)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('eventora_api_keys', JSON.stringify(nextKeys))
-    }
-  }
-
-  const handleSavePlatform = () => {
-    persistSettings({ ...settings })
+  const handleSavePlatform = async () => {
+    const updated = await updateAdminSettings(settings)
+    setSettings(updated)
     setSaveMessage('Platform settings saved.')
   }
 
-  const handleSaveMaintenance = () => {
-    persistSettings({ ...settings })
+  const handleSaveMaintenance = async () => {
+    const updated = await updateAdminSettings(settings)
+    setSettings(updated)
     setSaveMessage('Maintenance settings saved.')
   }
 
-  const handleSaveEmail = () => {
-    persistSettings({ ...settings })
+  const handleSaveEmail = async () => {
+    const updated = await updateAdminSettings(settings)
+    setSettings(updated)
     setEmailMessage('Email settings saved.')
   }
 
-  const handleTestEmail = () => {
-    setEmailMessage('Test email queued. Check your SMTP logs to verify.')
+  const handleTestEmail = async () => {
+    const res = await testAdminEmailSettings()
+    setEmailMessage(res.message)
   }
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     setSecurityMessage('')
     if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
       setSecurityMessage('Please fill in all password fields.')
@@ -115,21 +115,16 @@ export default function AdminSettings() {
       return
     }
 
-    const result = updateCurrentUserPassword(passwordForm.current, passwordForm.next)
+    const result = await updateMyPasswordApi(passwordForm.current, passwordForm.next)
     setSecurityMessage(result.message)
     if (result.success) {
       setPasswordForm({ current: '', next: '', confirm: '' })
     }
   }
 
-  const handleGenerateKey = () => {
-    const id = `key_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const key = `evt_${Math.random().toString(36).slice(2, 18)}`
-    const next: typeof apiKeys = [
-      { id, key, createdAt: new Date().toLocaleDateString(), status: 'active' },
-      ...apiKeys,
-    ]
-    persistKeys(next)
+  const handleGenerateKey = async () => {
+    const created = await createAdminApiKey()
+    setApiKeys([created, ...apiKeys])
   }
 
   const handleCopyKey = async (key: string) => {
@@ -141,11 +136,9 @@ export default function AdminSettings() {
     }
   }
 
-  const handleRevokeKey = (id: string) => {
-    const next: typeof apiKeys = apiKeys.map((k) =>
-      k.id === id ? { ...k, status: 'revoked' as const } : k
-    )
-    persistKeys(next)
+  const handleRevokeKey = async (id: string) => {
+    await revokeAdminApiKey(id)
+    setApiKeys(apiKeys.map((k) => (k.id === id ? { ...k, status: 'revoked' } : k)))
   }
 
   return (

@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input'
 import { AlertCircle, Eye, EyeOff, UserPlus, CheckCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/components/auth-provider'
-import { registerUser, getRoleRedirectUrl, type UserRole } from '@/lib/auth'
+import { registerUserApi, getRoleRedirectUrl, type UserRole } from '@/lib/auth'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -36,7 +36,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Registration is local-only: validate fields, create user, then redirect.
+  // Registration uses the backend API: validate fields, create user, then redirect.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -72,7 +72,7 @@ export default function RegisterPage() {
 
     setLoading(true)
 
-    const result = registerUser({
+    const result = await registerUserApi({
       email,
       password,
       fullName,
@@ -92,7 +92,7 @@ export default function RegisterPage() {
           router.push('/login')
         }, 3000)
       } else {
-        login(result.user)
+        login(result.user, result.token)
         const redirectUrl = getRoleRedirectUrl(result.user.role)
         router.push(redirectUrl)
       }

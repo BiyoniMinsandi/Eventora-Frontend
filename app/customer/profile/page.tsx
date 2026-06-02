@@ -26,11 +26,11 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { getUserBookings, type Booking, getUserNotifications, markAllNotificationsAsRead } from '@/lib/data'
-import { updateUserProfile, updateCurrentUserPassword } from '@/lib/auth'
+import { updateMeApi, updateMyPasswordApi } from '@/lib/auth'
 
 export default function CustomerProfilePage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, login } = useAuth()
   const [editMode, setEditMode] = useState(false)
   const [message, setMessage] = useState('')
   const [securityMessage, setSecurityMessage] = useState('')
@@ -56,8 +56,18 @@ export default function CustomerProfilePage() {
       phone: user.phone || '',
       location: user.location || '',
     })
-    setBookings(getUserBookings(user.id, 'customer'))
-    setNotifications(getUserNotifications(user.id))
+
+    let cancelled = false
+    ;(async () => {
+      const [b, n] = await Promise.all([getUserBookings(user.id, 'customer'), getUserNotifications(user.id)])
+      if (cancelled) return
+      setBookings(b)
+      setNotifications(n)
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [user])
 
   const memberSince = useMemo(() => {
@@ -98,14 +108,15 @@ export default function CustomerProfilePage() {
     }
   }
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!user) return
-    const result = updateUserProfile(user.id, {
+    const result = await updateMeApi({
       fullName: profile.fullName,
       phone: profile.phone,
       location: profile.location,
     })
     if (result.success) {
+      if (result.user) login(result.user)
       setMessage('Profile updated successfully.')
       setEditMode(false)
     } else {
@@ -113,7 +124,7 @@ export default function CustomerProfilePage() {
     }
   }
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     setSecurityMessage('')
     if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
       setSecurityMessage('Please fill in all password fields.')
@@ -124,17 +135,18 @@ export default function CustomerProfilePage() {
       return
     }
 
-    const result = updateCurrentUserPassword(passwordForm.current, passwordForm.next)
+    const result = await updateMyPasswordApi(passwordForm.current, passwordForm.next)
     setSecurityMessage(result.message)
     if (result.success) {
       setPasswordForm({ current: '', next: '', confirm: '' })
     }
   }
 
-  const handleMarkNotificationsRead = () => {
+  const handleMarkNotificationsRead = async () => {
     if (!user) return
-    markAllNotificationsAsRead(user.id)
-    setNotifications(getUserNotifications(user.id))
+    await markAllNotificationsAsRead(user.id)
+    const refreshed = await getUserNotifications(user.id)
+    setNotifications(refreshed)
   }
 
   return (
