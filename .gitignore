@@ -8,6 +8,12 @@ eventora-frontend/.vercel
 eventora-frontend/*.tsbuildinfo
 eventora-frontend/next-env.d.ts
 
+# ── Stray root-level Next.js artifacts (from accidental root installs) ────────
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
 # ── Backend (eventora-backend/) ──────────────────────────────────────────────
 eventora-backend/**/bin/
 eventora-backend/**/obj/
