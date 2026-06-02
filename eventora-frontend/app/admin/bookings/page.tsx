@@ -19,6 +19,7 @@ import { useAuth } from '@/components/auth-provider'
 import { logoutUser } from '@/lib/auth'
 import { getBookings, type Booking } from '@/lib/data'
 import { ArrowLeft, Search, Calendar, User, Briefcase } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const STATUS_COLORS: Record<Booking['status'], string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -36,6 +37,8 @@ export default function AdminBookingsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 15
 
   const handleLogout = () => {
     logoutUser()
@@ -69,7 +72,11 @@ export default function AdminBookingsPage() {
       )
     }
     setFiltered(result)
+    setCurrentPage(1)
   }, [bookings, search, statusFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const paginatedBookings = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const counts = {
     all: bookings.length,
@@ -123,12 +130,30 @@ export default function AdminBookingsPage() {
 
             {/* Bookings list */}
             {loading ? (
-              <p className="text-muted-foreground text-center py-12">Loading bookings...</p>
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-5 w-1/3" />
+                        <div className="flex gap-4">
+                          <Skeleton className="h-4 w-1/5" />
+                          <Skeleton className="h-4 w-1/5" />
+                          <Skeleton className="h-4 w-1/6" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-8 w-20" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
             ) : filtered.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">No bookings found.</p>
             ) : (
+              <>
               <div className="space-y-3">
-                {filtered.map((booking) => (
+                {paginatedBookings.map((booking) => (
                   <Card key={booking.id} className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-1">
@@ -171,6 +196,18 @@ export default function AdminBookingsPage() {
                   </Card>
                 ))}
               </div>
+              {/* Pagination controls */}
+              <div className="flex items-center justify-between mt-6">
+                <p className="text-sm text-muted-foreground">
+                  Showing {filtered.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} bookings
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</Button>
+                  <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</Button>
+                </div>
+              </div>
+              </>
             )}
           </div>
         </main>

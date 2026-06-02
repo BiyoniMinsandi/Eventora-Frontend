@@ -1,4 +1,5 @@
 using Eventora.Api.Endpoints;
+using Eventora.Api.Hubs;
 using Eventora.Api.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,7 @@ builder.Services
 // Core services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 // Infrastructure (MongoDB, persistence, etc.)
 builder.Services.AddEventoraInfrastructure(builder.Configuration);
@@ -36,6 +38,21 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(2),
         };
+
+        // SignalR WebSocket connections send the token as a query param because browsers
+        // cannot set Authorization headers on WebSocket upgrade requests.
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                var token = ctx.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && ctx.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    ctx.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -59,7 +76,8 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "http://localhost:3001")
             .AllowAnyHeader()
-            .AllowAnyMethod());
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 
 // Health checks
@@ -76,7 +94,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("FrontendDev");
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -203,6 +224,9 @@ authGroup.MapPost("/login", async (
         ));
     })
     .WithName("Login");
+
+// --- SignalR hub
+app.MapHub<ChatHub>("/hubs/chat");
 
 // --- Feature endpoints
 app.MapUserEndpoints();

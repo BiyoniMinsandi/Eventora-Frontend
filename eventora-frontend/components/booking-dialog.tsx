@@ -16,15 +16,17 @@ import {
 import { Calendar, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { createBooking } from '@/lib/data'
+import type { AvailabilitySlot } from '@/lib/auth'
 
 interface BookingDialogProps {
   vendorId: string
   vendorName: string
   vendorBusinessName: string
+  vendorAvailability?: AvailabilitySlot[]
   trigger?: React.ReactNode
 }
 
-export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigger }: BookingDialogProps) {
+export function BookingDialog({ vendorId, vendorName, vendorBusinessName, vendorAvailability, trigger }: BookingDialogProps) {
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
   const [open, setOpen] = useState(false)
@@ -52,6 +54,15 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, trigge
     if (user.role !== 'customer') {
       setError('Only customers can make bookings.')
       return
+    }
+
+    // Availability check: if the vendor has set specific dates, validate against them.
+    if (vendorAvailability && vendorAvailability.length > 0) {
+      const isAvailable = vendorAvailability.some((slot) => slot.date === formData.eventDate)
+      if (!isAvailable) {
+        setError('The vendor is not available on the selected date. Please choose a date from their availability calendar.')
+        return
+      }
     }
 
     setLoading(true)

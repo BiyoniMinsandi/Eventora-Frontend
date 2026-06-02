@@ -3,15 +3,35 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { CalendarDays, Menu, X, LogOut, User } from 'lucide-react'
-import { useState } from 'react'
+import { CalendarDays, Menu, X, LogOut, User, Bell } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/components/auth-provider'
 import { logoutUser, getRoleRedirectUrl } from '@/lib/auth'
+import { getUnreadNotificationCount } from '@/lib/data'
 
 export function Header() {
   const router = useRouter()
   const { user, isAuthenticated, logout: authLogout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setUnreadCount(0)
+      return
+    }
+
+    const fetchCount = async () => {
+      try {
+        const count = await getUnreadNotificationCount(user.id)
+        setUnreadCount(count)
+      } catch {}
+    }
+
+    fetchCount()
+    const interval = setInterval(fetchCount, 30000)
+    return () => clearInterval(interval)
+  }, [isAuthenticated, user])
 
   const handleLogout = () => {
     logoutUser()
@@ -46,6 +66,18 @@ export function Header() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated && user ? (
               <>
+                <Link
+                  href={`/${user.role === 'admin' ? 'admin' : user.role === 'vendor' ? 'vendor' : 'customer'}/notifications`}
+                  className="relative p-2 rounded-md hover:bg-muted transition"
+                  aria-label="Notifications"
+                >
+                  <Bell className="w-5 h-5 text-foreground" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
                 <Button variant="ghost" asChild>
                   <Link href={getRoleRedirectUrl(user.role)}>
                     <User className="w-4 h-4 mr-2" />

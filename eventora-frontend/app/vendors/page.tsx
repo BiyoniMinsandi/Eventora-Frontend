@@ -9,7 +9,7 @@
  * in Next.js App Router.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Header } from '@/components/layout/header'
@@ -17,7 +17,8 @@ import { Footer } from '@/components/layout/footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Star, MapPin, Search, Filter, ChevronDown } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Star, MapPin, Search, Filter } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import Loading from './loading'
@@ -32,6 +33,8 @@ export default function VendorBrowsePage() {
   const [showFilters, setShowFilters] = useState(false)
   const [vendors, setVendors] = useState<User[]>([])
   const [reviewSummary, setReviewSummary] = useState<Record<string, { avg: number; count: number }>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const PRICE_BOUNDS: Record<string, { min?: number; max?: number }> = {
     all: {},
@@ -40,8 +43,7 @@ export default function VendorBrowsePage() {
     premium: { min: 100000 },
   }
 
-  // Re-fetch from the API when category or price range changes.
-  // Text search is handled client-side for instant feedback.
+  // Re-fetch when category/price changes; also debounce text search to backend.
   useEffect(() => {
     const categoryParam = searchParams.get('category')
     const searchParam = searchParams.get('search')
@@ -52,22 +54,28 @@ export default function VendorBrowsePage() {
     const bounds = PRICE_BOUNDS[priceRange] ?? {}
     let cancelled = false
 
-    ;(async () => {
+    const doFetch = async (searchTerm?: string) => {
+      setIsLoading(true)
       const approvedVendors = await getVendors({
+        search: searchTerm || undefined,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
         minPrice: bounds.min,
         maxPrice: bounds.max,
       })
       if (cancelled) return
       setVendors(approvedVendors)
-    })()
+      setIsLoading(false)
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => doFetch(searchQuery || undefined), 400)
 
     return () => {
       cancelled = true
+      if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-    // PRICE_BOUNDS is a constant defined in the same render; safe to omit from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, priceRange, selectedCategory])
+  }, [searchParams, priceRange, selectedCategory, searchQuery])
 
   useEffect(() => {
     if (vendors.length === 0) {
@@ -104,16 +112,8 @@ export default function VendorBrowsePage() {
     { value: 'music', label: 'Music & Entertainment' },
   ]
 
-  // Vendors are already filtered by the backend; keep a local search pass for instant UI response.
-  const filteredVendors = vendors.filter((vendor) => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    return (
-      vendor.businessName?.toLowerCase().includes(q) ||
-      vendor.fullName.toLowerCase().includes(q) ||
-      vendor.description?.toLowerCase().includes(q)
-    )
-  })
+  // Backend handles all filtering including text search; no client-side pass needed.
+  const filteredVendors = vendors
 
   return (
     <Suspense fallback={<Loading />}>
@@ -207,7 +207,22 @@ export default function VendorBrowsePage() {
           {/* Vendors Grid */}
           <section className="py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {filteredVendors.length > 0 ? (
+              {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="overflow-hidden">
+                      <Skeleton className="h-48 w-full rounded-none" />
+                      <div className="p-5 space-y-3">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-9 w-full mt-2" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : filteredVendors.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredVendors.map((vendor) => {
                     const averageRating = reviewSummary[vendor.id]?.avg ?? 0

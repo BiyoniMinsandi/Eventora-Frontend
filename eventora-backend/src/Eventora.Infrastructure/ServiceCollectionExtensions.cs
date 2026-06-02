@@ -1,7 +1,9 @@
 using Eventora.Infrastructure.Configuration;
+using Eventora.Infrastructure.Email;
 using Eventora.Infrastructure.Mongo;
 using Eventora.Infrastructure.Persistence;
 using Eventora.Infrastructure.Security;
+using Eventora.Application.Abstractions.Email;
 using Eventora.Application.Abstractions.Persistence;
 using Eventora.Application.Abstractions.Security;
 using Microsoft.Extensions.Configuration;
@@ -60,6 +62,9 @@ public static IServiceCollection AddEventoraInfrastructure(
 
         // Security
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+
+        // Email
+        services.AddSingleton<IEmailService, SmtpEmailService>();
 
         // Repositories
         services.AddSingleton<IUserRepository, MongoUserRepository>();

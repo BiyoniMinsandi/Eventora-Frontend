@@ -5,7 +5,7 @@
  * Purpose: Vendor inbox + conversation view.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ import {
   type Conversation,
   type Message,
 } from '@/lib/data'
+import { getChatConnection, startChatConnection } from '@/lib/signalr'
 
 export default function VendorMessagesPage() {
   const { user } = useAuth()
@@ -31,6 +32,9 @@ export default function VendorMessagesPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [messageInput, setMessageInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const selectedConvRef = useRef<Conversation | null>(null)
+  selectedConvRef.current = selectedConversation
 
   useEffect(() => {
     if (!user) return
@@ -68,6 +72,7 @@ export default function VendorMessagesPage() {
       if (cancelled) return
 
       setMessages(convMessages)
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
       await markConversationAsRead(selectedConversation.id, user.id)
       if (cancelled) return
@@ -79,6 +84,38 @@ export default function VendorMessagesPage() {
       cancelled = true
     }
   }, [selectedConversation, user])
+
+  // SignalR: real-time incoming messages.
+  useEffect(() => {
+    if (!user) return
+
+    let mounted = true
+    const conn = getChatConnection()
+
+    const handleReceive = (msg: Message) => {
+      if (!mounted) return
+      const conv = selectedConvRef.current
+      if (conv && msg.conversationId === conv.id) {
+        setMessages((prev) => [...prev, msg])
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      }
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === msg.conversationId
+            ? { ...c, lastMessage: msg.content, unreadCount: c.id === selectedConvRef.current?.id ? 0 : c.unreadCount + 1 }
+            : c,
+        ),
+      )
+    }
+
+    conn.on('ReceiveMessage', handleReceive)
+    startChatConnection().catch(() => {})
+
+    return () => {
+      mounted = false
+      conn.off('ReceiveMessage', handleReceive)
+    }
+  }, [user])
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -165,6 +202,7 @@ export default function VendorMessagesPage() {
                     </div>
                   ))
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Composer */}

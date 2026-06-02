@@ -18,15 +18,11 @@ import { Star, MapPin, Phone, Mail, ArrowLeft, Calendar, AlertCircle } from 'luc
 import { BookingDialog } from '@/components/booking-dialog'
 import { getVendorById, getVendors, getVendorReviews } from '@/lib/data'
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import type { User } from '@/lib/auth'
 
-interface VendorProfilePageProps {
-  params: {
-    id: string
-  }
-}
-
-export default function VendorProfilePage({ params }: VendorProfilePageProps) {
+export default function VendorProfilePage() {
+  const params = useParams()
   const [vendor, setVendor] = useState<User | null>(null)
   const [reviews, setReviews] = useState<any[]>([])
   const [avgRating, setAvgRating] = useState(0)
@@ -46,7 +42,7 @@ export default function VendorProfilePage({ params }: VendorProfilePageProps) {
     (candidate.approved === true || Boolean(candidate.approvedAt))
 
   useEffect(() => {
-    const paramId = decodeURIComponent(params.id)
+    const paramId = decodeURIComponent((params.id as string) ?? '')
 
     let cancelled = false
     ;(async () => {
@@ -219,6 +215,7 @@ export default function VendorProfilePage({ params }: VendorProfilePageProps) {
                 vendorId={vendor.id}
                 vendorName={vendor.businessName || vendor.fullName}
                 vendorBusinessName={vendor.businessName || vendor.fullName}
+                vendorAvailability={vendor.availability}
               />
             </div>
           </div>

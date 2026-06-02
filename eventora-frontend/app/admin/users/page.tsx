@@ -32,6 +32,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { type User } from '@/lib/auth'
 import { getAdminUsers, suspendUser, unsuspendUser } from '@/lib/data'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function AdminUsersPage() {
   const router = useRouter()
@@ -40,14 +41,19 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [selectedUser, setSelectedUser] = useState<any | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 15
 
   useEffect(() => {
     let cancelled = false
 
     ;(async () => {
+      setIsLoading(true)
       const users = await getAdminUsers()
       if (cancelled) return
       setRawUsers(users)
+      setIsLoading(false)
     })()
 
     return () => {
@@ -91,6 +97,9 @@ export default function AdminUsersPage() {
       return matchesQuery && matchesRole && matchesStatus
     })
   }, [mappedUsers, roleFilter, searchQuery, statusFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE))
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const handleToggleStatus = async (userId: string) => {
     const current = rawUsers.find((u) => u.id === userId)
@@ -213,6 +222,19 @@ export default function AdminUsersPage() {
 
           {/* Users Table */}
           <Card className="overflow-hidden">
+            {isLoading ? (
+              <div className="p-6 space-y-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-4 w-1/6" />
+                    <Skeleton className="h-4 w-1/6" />
+                    <Skeleton className="h-4 w-1/12" />
+                  </div>
+                ))}
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b border-border bg-muted/50">
@@ -241,14 +263,14 @@ export default function AdminUsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.length === 0 ? (
+                  {paginatedUsers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-10 text-center text-sm text-muted-foreground">
                         No users match the current filters.
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((user) => (
+                    paginatedUsers.map((user) => (
                     <tr
                       key={user.id}
                       className="border-b border-border hover:bg-muted/30 transition-colors"
@@ -319,13 +341,33 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </Card>
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredUsers.length} of {mappedUsers.length} users
+              Showing {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, filteredUsers.length)}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length} users
             </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </div>
       </main>

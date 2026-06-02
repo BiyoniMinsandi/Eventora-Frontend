@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Eventora.Application.Abstractions.Email;
 using Eventora.Application.Abstractions.Persistence;
 using Eventora.Application.Contracts.Bookings;
 using Eventora.Domain.Bookings;
@@ -66,6 +67,7 @@ internal static class BookingsEndpoints
             IUserRepository users,
             IBookingRepository bookings,
             INotificationRepository notifications,
+            IEmailService email,
             CancellationToken ct) =>
         {
             var userId = CurrentUser.TryGetUserId(principal);
@@ -79,6 +81,17 @@ internal static class BookingsEndpoints
             if (vendor is null || vendor.Role != UserRole.Vendor || !vendor.Approved)
             {
                 return Results.BadRequest(new { message = "Vendor is not available" });
+            }
+
+            // Availability enforcement: if vendor has set availability slots, the date must match.
+            if (vendor.Availability.Count > 0)
+            {
+                var bookingDateNorm = req.EventDate.Trim();
+                var isAvailable = vendor.Availability.Any(s => s.Date == bookingDateNorm);
+                if (!isAvailable)
+                {
+                    return Results.BadRequest(new { message = "The vendor is not available on the selected date" });
+                }
             }
 
             var booking = new Eventora.Domain.Bookings.Booking
@@ -109,6 +122,15 @@ internal static class BookingsEndpoints
                 relatedDisputeId: null,
                 ct);
 
+            // Email: notify vendor of new booking request
+            await email.SendAsync(
+                vendor.Email, vendor.BusinessName ?? vendor.FullName,
+                "New Booking Request — Eventora",
+                $"<p>Hi {vendor.BusinessName ?? vendor.FullName},</p>" +
+                $"<p>You have a new booking request from <strong>{customer.FullName}</strong> for <strong>{booking.Service}</strong> on {booking.EventDate}.</p>" +
+                $"<p>Log in to Eventora to review and respond.</p>",
+                ct);
+
             return Results.Ok(BookingDtoMapping.ToDto(booking));
         }).RequireAuthorization("CustomerOnly");
 
@@ -120,6 +142,7 @@ internal static class BookingsEndpoints
             IBookingRepository bookings,
             IConversationRepository conversations,
             INotificationRepository notifications,
+            IEmailService email,
             CancellationToken ct) =>
         {
             var userId = CurrentUser.TryGetUserId(principal);
@@ -165,6 +188,19 @@ internal static class BookingsEndpoints
                 relatedDisputeId: null,
                 ct);
 
+            // Email: notify customer that booking was accepted
+            var customer = await users.GetByIdAsync(booking.CustomerId, ct);
+            if (customer is not null)
+            {
+                await email.SendAsync(
+                    customer.Email, customer.FullName,
+                    "Your Booking Has Been Accepted — Eventora",
+                    $"<p>Hi {customer.FullName},</p>" +
+                    $"<p>Great news! Your booking for <strong>{booking.Service}</strong> on <strong>{booking.EventDate}</strong> has been accepted by <strong>{booking.VendorBusinessName}</strong>.</p>" +
+                    $"<p>You can now message the vendor directly through Eventora.</p>",
+                    ct);
+            }
+
             return Results.Ok(BookingDtoMapping.ToDto(booking));
         }).RequireAuthorization("VendorOnly");
 
@@ -172,8 +208,10 @@ internal static class BookingsEndpoints
             string id,
             BookingDecisionRequest req,
             ClaimsPrincipal principal,
+            IUserRepository users,
             IBookingRepository bookings,
             INotificationRepository notifications,
+            IEmailService email,
             CancellationToken ct) =>
         {
             var userId = CurrentUser.TryGetUserId(principal);
@@ -203,6 +241,20 @@ internal static class BookingsEndpoints
                 relatedDisputeId: null,
                 ct);
 
+            // Email: notify customer of rejection
+            var customerRej = await users.GetByIdAsync(booking.CustomerId, ct);
+            if (customerRej is not null)
+            {
+                await email.SendAsync(
+                    customerRej.Email, customerRej.FullName,
+                    "Booking Update — Eventora",
+                    $"<p>Hi {customerRej.FullName},</p>" +
+                    $"<p>Unfortunately, your booking for <strong>{booking.Service}</strong> on <strong>{booking.EventDate}</strong> was not accepted by <strong>{booking.VendorBusinessName}</strong>.</p>" +
+                    (string.IsNullOrWhiteSpace(booking.VendorResponseNote) ? "" : $"<p>Vendor note: {booking.VendorResponseNote}</p>") +
+                    $"<p>Feel free to browse other vendors on Eventora.</p>",
+                    ct);
+            }
+
             return Results.Ok(BookingDtoMapping.ToDto(booking));
         }).RequireAuthorization("VendorOnly");
 
@@ -221,6 +273,16 @@ internal static class BookingsEndpoints
             if (booking is null) return Results.NotFound(new { message = "Booking not found" });
             if (booking.CustomerId != userId) return Results.Forbid();
             if (booking.Status is BookingStatus.Completed or BookingStatus.Cancelled) return Results.BadRequest(new { message = "Booking cannot be cancelled" });
+
+            // 2-day cancellation deadline: customers cannot cancel within 2 days of the event.
+            if (DateTimeOffset.TryParse(booking.EventDate, out var eventDate))
+            {
+                var daysUntilEvent = (eventDate.Date - DateTimeOffset.UtcNow.Date).TotalDays;
+                if (daysUntilEvent < 2)
+                {
+                    return Results.BadRequest(new { message = "Bookings cannot be cancelled within 2 days of the event" });
+                }
+            }
 
             booking.Status = BookingStatus.Cancelled;
             await bookings.UpdateAsync(booking, ct);
@@ -241,8 +303,10 @@ internal static class BookingsEndpoints
         group.MapPost("/{id}/complete", async (
             string id,
             ClaimsPrincipal principal,
+            IUserRepository users,
             IBookingRepository bookings,
             INotificationRepository notifications,
+            IEmailService email,
             CancellationToken ct) =>
         {
             var userId = CurrentUser.TryGetUserId(principal);
@@ -276,6 +340,19 @@ internal static class BookingsEndpoints
                 relatedBookingId: booking.Id,
                 relatedDisputeId: null,
                 ct);
+
+            // Email: notify customer event is complete and prompt review
+            var customerCmp = await users.GetByIdAsync(booking.CustomerId, ct);
+            if (customerCmp is not null)
+            {
+                await email.SendAsync(
+                    customerCmp.Email, customerCmp.FullName,
+                    "Event Completed — Please Leave a Review",
+                    $"<p>Hi {customerCmp.FullName},</p>" +
+                    $"<p>Your event with <strong>{booking.VendorBusinessName}</strong> has been marked as completed. We hope everything went well!</p>" +
+                    $"<p>Please take a moment to <a href=\"http://localhost:3000/customer/bookings\">leave a review</a> for the vendor.</p>",
+                    ct);
+            }
 
             return Results.Ok(BookingDtoMapping.ToDto(booking));
         }).RequireAuthorization("VendorOnly");

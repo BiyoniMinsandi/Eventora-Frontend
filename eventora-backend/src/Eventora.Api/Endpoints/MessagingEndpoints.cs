@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using Eventora.Api.Hubs;
 using Eventora.Application.Abstractions.Persistence;
 using Eventora.Application.Contracts.Messaging;
 using Eventora.Domain.Bookings;
 using Eventora.Domain.Notifications;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Eventora.Api.Endpoints;
 
@@ -148,6 +150,7 @@ internal static class MessagingEndpoints
             IBookingRepository bookings,
             INotificationRepository notifications,
             IUserRepository users,
+            IHubContext<ChatHub> hub,
             CancellationToken ct) =>
         {
             var userId = CurrentUser.TryGetUserId(principal);
@@ -206,7 +209,7 @@ internal static class MessagingEndpoints
                 relatedDisputeId: null,
                 ct);
 
-            return Results.Ok(new MessageDto(
+            var dto = new MessageDto(
                 message.Id,
                 message.ConversationId,
                 message.SenderId,
@@ -214,7 +217,12 @@ internal static class MessagingEndpoints
                 message.ReceiverId,
                 message.Content,
                 message.Timestamp.ToString("O"),
-                message.Read));
+                message.Read);
+
+            // Push the new message to the recipient via SignalR so they see it instantly.
+            await hub.Clients.Group($"user_{req.ReceiverId}").SendAsync("ReceiveMessage", dto, ct);
+
+            return Results.Ok(dto);
         });
 
         group.MapPost("/{id}/read", async (
