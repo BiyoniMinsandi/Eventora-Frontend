@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Calendar, CheckCircle } from 'lucide-react'
+import { Calendar, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { createBooking } from '@/lib/data'
 import type { AvailabilitySlot } from '@/lib/auth'
@@ -33,6 +33,7 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, vendor
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [availabilityWarning, setAvailabilityWarning] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
     service: '',
@@ -54,15 +55,6 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, vendor
     if (user.role !== 'customer') {
       setError('Only customers can make bookings.')
       return
-    }
-
-    // Availability check: if the vendor has set specific dates, validate against them.
-    if (vendorAvailability && vendorAvailability.length > 0) {
-      const isAvailable = vendorAvailability.some((slot) => slot.date === formData.eventDate)
-      if (!isAvailable) {
-        setError('The vendor is not available on the selected date. Please choose a date from their availability calendar.')
-        return
-      }
     }
 
     setLoading(true)
@@ -171,11 +163,26 @@ export function BookingDialog({ vendorId, vendorName, vendorBusinessName, vendor
                   id="eventDate"
                   type="date"
                   value={formData.eventDate}
-                  onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                  onChange={(e) => {
+                    const date = e.target.value
+                    setFormData({ ...formData, eventDate: date })
+                    if (date && vendorAvailability && vendorAvailability.length > 0) {
+                      const ok = vendorAvailability.some((s) => s.date === date)
+                      setAvailabilityWarning(ok ? null : "This date is outside the vendor's listed availability — your request will still be sent and the vendor will confirm.")
+                    } else {
+                      setAvailabilityWarning(null)
+                    }
+                  }}
                   min={new Date().toISOString().split('T')[0]}
                   required
                   disabled={loading}
                 />
+                {availabilityWarning && (
+                  <p className="text-xs text-amber-600 flex items-start gap-1.5 mt-1">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <span>{availabilityWarning}</span>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -156,7 +156,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-30),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor2 = await UpsertUserAsync(users, new User
@@ -181,7 +181,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-25),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor3 = await UpsertUserAsync(users, new User
@@ -206,7 +206,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-20),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor4 = await UpsertUserAsync(users, new User
@@ -231,7 +231,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-15),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor5 = await UpsertUserAsync(users, new User
@@ -256,7 +256,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-10),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor6 = await UpsertUserAsync(users, new User
@@ -281,7 +281,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-5),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         // ── 10 Additional Approved Vendors ───────────────────────────────────────
@@ -335,7 +335,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-50),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor8 = await UpsertUserAsync(users, new User
@@ -387,7 +387,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-45),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor9 = await UpsertUserAsync(users, new User
@@ -439,7 +439,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-40),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor10 = await UpsertUserAsync(users, new User
@@ -490,7 +490,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-35),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor11 = await UpsertUserAsync(users, new User
@@ -541,7 +541,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-30),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor12 = await UpsertUserAsync(users, new User
@@ -592,7 +592,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-28),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor13 = await UpsertUserAsync(users, new User
@@ -643,7 +643,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-22),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor14 = await UpsertUserAsync(users, new User
@@ -694,7 +694,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-18),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor15 = await UpsertUserAsync(users, new User
@@ -745,7 +745,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-12),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         var vendor16 = await UpsertUserAsync(users, new User
@@ -796,7 +796,7 @@ public sealed class MongoSeedHostedService : IHostedService
             ],
             Approved     = true,
             ApprovedAt   = DateTimeOffset.UtcNow.AddDays(-8),
-            Availability = AvailabilityFor(30),
+            Availability = [],
         }, ct);
 
         // ── Pending vendors (for admin approvals demo) ────────────────────────
@@ -1384,7 +1384,36 @@ public sealed class MongoSeedHostedService : IHostedService
     {
         var email = (seed.Email ?? string.Empty).Trim().ToLowerInvariant();
         var existing = await col.Find(u => u.Email == email).FirstOrDefaultAsync(ct);
-        if (existing is not null) return existing;
+
+        if (existing is not null)
+        {
+            // Refresh mutable vendor fields so re-runs pick up photo/description updates.
+            if (existing.Role == UserRole.Vendor)
+            {
+                var update = Builders<User>.Update
+                    .Set(u => u.Photos, seed.Photos)
+                    .Set(u => u.Description, seed.Description)
+                    .Set(u => u.Services, seed.Services)
+                    .Set(u => u.Pricing, seed.Pricing)
+                    .Set(u => u.PriceMin, seed.PriceMin)
+                    .Set(u => u.PriceMax, seed.PriceMax)
+                    .Set(u => u.Experience, seed.Experience)
+                    .Set(u => u.BusinessName, seed.BusinessName)
+                    .Set(u => u.Category, seed.Category)
+                    .Set(u => u.Location, seed.Location)
+                    .Set(u => u.Availability, seed.Availability)
+                    .Set(u => u.UpdatedAt, DateTimeOffset.UtcNow);
+                await col.UpdateOneAsync(u => u.Id == existing.Id, update, cancellationToken: ct);
+                existing.Photos       = seed.Photos;
+                existing.Description  = seed.Description;
+                existing.Services     = seed.Services;
+                existing.Pricing      = seed.Pricing;
+                existing.PriceMin     = seed.PriceMin;
+                existing.PriceMax     = seed.PriceMax;
+                existing.Availability = seed.Availability;
+            }
+            return existing;
+        }
 
         seed.Id        = string.IsNullOrWhiteSpace(seed.Id) ? NewId() : seed.Id;
         seed.Email     = email;

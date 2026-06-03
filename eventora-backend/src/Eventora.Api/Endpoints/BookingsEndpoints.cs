@@ -83,17 +83,6 @@ internal static class BookingsEndpoints
                 return Results.BadRequest(new { message = "Vendor is not available" });
             }
 
-            // Availability enforcement: if vendor has set availability slots, the date must match.
-            if (vendor.Availability.Count > 0)
-            {
-                var bookingDateNorm = req.EventDate.Trim();
-                var isAvailable = vendor.Availability.Any(s => s.Date == bookingDateNorm);
-                if (!isAvailable)
-                {
-                    return Results.BadRequest(new { message = "The vendor is not available on the selected date" });
-                }
-            }
-
             var booking = new Eventora.Domain.Bookings.Booking
             {
                 CustomerId = customer.Id,
