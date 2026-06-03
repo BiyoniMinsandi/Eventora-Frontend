@@ -308,6 +308,25 @@ export async function registerUserApi(userData: {
     }
 
     const data = await response.json()
+
+    // Vendor registration: backend returns token="" because vendors need admin
+    // approval before they can log in. Treat this as a successful registration
+    // without a session token — the caller checks role and shows the pending message.
+    if (!data.token) {
+      if (!data.user) {
+        return { success: false, message: data.message || 'Registration failed' }
+      }
+      const pendingUser: User = {
+        id: data.user.id,
+        email: data.user.email,
+        fullName: data.user.fullName,
+        role: data.user.role,
+        approved: data.user.approved,
+        createdAt: data.user.createdAt || new Date().toISOString(),
+      }
+      return { success: true, message: data.message || 'Registration successful', user: pendingUser }
+    }
+
     const tokenPayload = verifyJWT(data.token)
     if (!tokenPayload) {
       return { success: false, message: 'Invalid token from server' }
